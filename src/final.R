@@ -19,10 +19,7 @@ outLayer <- function(x, y) {
   x + as.layer(y)
 }
 
-#### Long-term precipitation analysis ##########################################
-# Compute long-term anomalies and trends for KIA precipitation and create
-# publication quality figure.
-
+#### Read data sets ############################################################
 # Read precipitation data and create a continous time series.
 precip <- 
   read.csv("kilimanjaro_gsod_dynamics/gsod_precip/kia_prcp_1975_2014_mnthly.csv", 
@@ -33,6 +30,80 @@ nd <- precip[nrow(precip), 1]
 ts <- seq(st, nd, "month")
 precip <- merge(data.frame(ts), precip, by = 1, all.x = TRUE)
 
+# Read ENSO ONI index
+oni <- read.csv("enso/enso_and_iod.csv", skip = 1, header = TRUE)
+oni$Season <- paste0(oni$Season, oni$X, oni$X.1)
+oni <- oni[, -grep("X", names(oni))]
+
+# Read ENSO MEI index
+mei <- read.csv("enso/mei.txt", skip = 9, header = TRUE, sep = "\t", nrows = 65)
+mei <- mei[,c(1,8:13,2:7)]
+mei <- do.call(rbind, lapply(seq(nrow(mei)-1), function(x){
+  modrow <- mei[x,]
+  modrow[,8:13] <- mei[x+1,8:13]
+  return(modrow)
+}))
+mei$Season <- paste0(mei$YEAR,"-",mei$YEAR+1)
+mei <- cbind(oni[,1:3],mei[,2:13])
+
+# Read DMI index
+dmi <- read.csv("enso/dmi.txt", header = FALSE, sep = ":")
+colnames(dmi) <- c("Year", "Month", "Day", "Hour", "DMI")
+dmi$YearMonth <- paste0(dmi$Year,"-",sprintf("%02d", dmi$Month))
+dmi <- aggregate(dmi$DMI, by=list(dmi$YearMonth), FUN = "mean")
+colnames(dmi) <- c("YearMonth", "DMI")
+years <- unique(substr(dmi$YearMonth, 1, 4))
+dmi <- as.data.frame(foreach(i = years, .combine = "rbind") %do% {
+  dat <- dmi[grep(i, dmi$YearMonth), ]
+  foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
+    dat$DMI[j]
+  }
+})
+dmi$Year <- years
+dmi <- dmi[,c(13,7:12,1:6)]
+dmi <- do.call(rbind, lapply(seq(nrow(dmi)-1), function(x){
+  modrow <- dmi[x,]
+  modrow[,8:13] <- dmi[x+1,8:13]
+  return(modrow)
+}))
+dmi$Season <- paste0(as.numeric(dmi$Year),"-",as.numeric(dmi$Year)+1)
+fr <- grep(dmi$Season[1], oni$Season)
+lr <- grep(dmi$Season[nrow(dmi)], oni$Season)
+dmi <- cbind(oni[fr:lr,1:3],dmi[,2:13])
+colnames(dmi)[4:15] <- colnames(oni)[4:15]
+
+
+
+
+dmiHAD <- read.csv("enso/dmi_hadisst.txt", header = FALSE, sep = " ")
+colnames(dmiHAD) <- c("Year", "Month", "DMIHAT")
+dmiHAD$YearMonth <- paste0(dmiHAD$Year,"-",sprintf("%02d", dmiHAD$Month))
+dmiHAD <- dmiHAD[,c(4,3)]
+years <- unique(substr(dmiHAD$YearMonth, 1, 4))
+dmiHAD <- as.data.frame(foreach(i = years, .combine = "rbind") %do% {
+  dat <- dmiHAD[grep(i, dmiHAD$YearMonth), ]
+  foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
+    dat$DMIHAT[j]
+  }
+})
+dmiHAD$Year <- years
+dmiHAD <- dmiHAD[,c(13,7:12,1:6)]
+dmiHAD <- do.call(rbind, lapply(seq(nrow(dmiHAD)-1), function(x){
+  modrow <- dmiHAD[x,]
+  modrow[,8:13] <- dmiHAD[x+1,8:13]
+  return(modrow)
+}))
+dmiHAD$Season <- paste0(as.numeric(dmiHAD$Year),"-",as.numeric(dmiHAD$Year)+1)
+fr <- grep(dmiHAD$Season[1], oni$Season)
+lr <- grep(dmiHAD$Season[nrow(dmiHAD)], oni$Season)
+dmiHAD <- cbind(oni[fr:lr,1:3],dmiHAD[,2:13])
+colnames(dmiHAD)[4:15] <- colnames(oni)[4:15]
+
+aoi.list <- list(ONI = oni, MEI = mei, DMI = dmi, DMIHAD = dmiHAD)
+
+#### Long-term precipitation analysis ##########################################
+# Compute long-term anomalies and trends for KIA precipitation and create
+# publication quality figure.
 # Compute 3 month running mean of original precipitation values using a
 # Kolmogorov-Zurbenko filter with one iteration
 precip$kz03k01 <- kz(precip$P_RT_NRT, m = 3, k = 1)
@@ -122,10 +193,7 @@ plot(plot.precip.seasonal03yr.all)
 #### Precipitation analysis vs ENSO ############################################
 # Prepare aoi record and classifiy years as La Nina (L), El Nino (E) or 
 # normal (N); weak ENSO cycles are classified as normal
-aoi <- read.csv("enso/enso_and_iod.csv", skip = 1, header = TRUE)
-aoi$Season <- paste0(aoi$Season, aoi$X, aoi$X.1)
-aoi <- aoi[, -grep("X", names(aoi))]
-
+aoi <- aoi.list$ONI
 aoi$TypeClass <- "N"
 aoi$TypeClass[grep("L", aoi$Type)] <- "LS"
 aoi$TypeClass[grep("WL", aoi$Type)] <- "LW"
@@ -213,11 +281,12 @@ plot(plot.precip.shift06m.oni.ssn_kz03k01)
 #### Precipitation analysis vs IOD #############################################
 # Prepare aoi record and classifiy years as IOD plus (P), IOD minus (M) or
 # normal (N)
+aoi <- aoi.list$DMIHAD
 aoi$TypeClass <- "N"
-aoi$TypeClass[grep("E", aoi$Type)] <- "X"
-aoi$TypeClass[grep("L", aoi$Type)] <- "X"
-aoi$TypeClass[grep("P", aoi$IOD)] <- "IP"
-aoi$TypeClass[grep("M", aoi$IOD)] <- "IM"
+aoi$TypeClass[grep("P", aoi$IOD)] <- "I1P"
+aoi$TypeClass[grep("M", aoi$IOD)] <- "I2M"
+#aoi$TypeClass[grep("E", aoi$Type)] <- "X"
+#aoi$TypeClass[grep("L", aoi$Type)] <- "X"
 
 precip.shift06m <- precip[7:(nrow(precip)-6), ]
 
@@ -225,6 +294,8 @@ precip.shift06m.iod.split.median <- combineAOPI(aoi, precip.shift06m)
 
 if(length(precip.shift06m.iod.split.median) == 5){
   colors <- c("blue", "lightblue", "red", "bisque", "black")
+} else if (length(precip.shift06m.iod.split.median) == 4){
+  colors <- c("blue", "red", "black", "bisque")
 } else {
   colors <- c("blue", "red", "black")  
 }
@@ -247,7 +318,7 @@ bw.plot + geom_boxplot()
 
 # Create publication quality figures of correlations between aoi and 
 # precipitation
-years <- unique(substr(precip$ts, 1, 4))
+years <- unique(substr(precip.shift06m.aoi$ts, 1, 4))
 precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.aoi[grep(i, precip.shift06m.aoi$ts), ]
   foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
@@ -258,7 +329,7 @@ precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
 aoi.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.aoi[grep(i, precip.shift06m.aoi$ts), ]
   foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
-    dat$IOD[j]
+    dat$oni[j]
   }
 }
 

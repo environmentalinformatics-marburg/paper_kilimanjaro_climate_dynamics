@@ -1,4 +1,5 @@
 combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
+  
   aoi.reshape <- do.call("rbind", lapply(seq_len(nrow(aoi)), function(i) {
     st <- as.Date(paste0(substr(aoi[i, 3], 1, 4), "-07-01"))
     nd <- as.Date(paste0(substr(aoi[i, 3], 6, 9), "-06-01"))
@@ -13,6 +14,8 @@ combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
   
   precip.shift06m.aoi <- 
     merge(precip.shift06m, aoi.reshape, all.x = TRUE, by.x = "ts", by.y = "month")
+  precip.shift06m.aoi <- 
+    precip.shift06m.aoi[complete.cases(precip.shift06m.aoi),]
   
   precip.shift06m.aoi.split <- 
     split(precip.shift06m.aoi, precip.shift06m.aoi$TypeClass)
