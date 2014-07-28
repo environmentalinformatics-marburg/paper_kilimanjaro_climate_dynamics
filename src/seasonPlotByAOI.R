@@ -1,5 +1,7 @@
 seasonPlotByAOI <- function(precip, color,
-                            individual = FALSE){
+                            individual = FALSE,
+                            normal = NULL,
+                            ymin = 0, ymax = 200){
 
 #   oni.reshape <- do.call("rbind", lapply(seq_len(nrow(oni)), function(i) {
 #     st <- as.Date(paste0(substr(oni[i, 3], 1, 4), "-07-01"))
@@ -46,7 +48,7 @@ seasonPlotByAOI <- function(precip, color,
           xnew <- as.factor(sp[[1]])
           factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01)))
           xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", 
-                 ylim = c(0, 700), col = colors[x],
+                 ylim = c(ymin, ymax), col = colors[x],
                  scale=list(x=list(at = at, labels = labels)),
                  xlab = "Month", ylab = "Precipitation")
         })})
@@ -62,11 +64,16 @@ seasonPlotByAOI <- function(precip, color,
         xnew <- as.factor(sp[[1]])
         factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01)))
         xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", 
-               ylim = c(0, 200), col = colors[x],
+               ylim = c(ymin, ymax), col = colors[x],
                scale=list(x=list(at = at, labels = labels)),
                xlab = "Month", ylab = "Precipitation")
       })
     plot.precip.all <- 
       Reduce("outLayer", plot.precip)
   }
+  if(!is.null(normal)){
+    plot.precip.all <- 
+      Reduce("outLayer", c(list(normal), plot.precip))
+  }
+  return(plot.precip.all)
 }

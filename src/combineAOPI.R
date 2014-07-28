@@ -4,7 +4,7 @@ combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
     st <- as.Date(paste0(substr(aoi[i, 3], 1, 4), "-07-01"))
     nd <- as.Date(paste0(substr(aoi[i, 3], 6, 9), "-06-01"))
     data.frame(aoi[i, c(1:3, ncol(aoi))], 
-               oni = as.numeric(aoi[i, 4:(ncol(aoi)-1)]), 
+               aoi = as.numeric(aoi[i, 4:(ncol(aoi)-1)]), 
                month = seq(st, nd, "month"))
   }))
   
@@ -14,6 +14,7 @@ combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
   
   precip.shift06m.aoi <- 
     merge(precip.shift06m, aoi.reshape, all.x = TRUE, by.x = "ts", by.y = "month")
+  
   precip.shift06m.aoi <- 
     precip.shift06m.aoi[complete.cases(precip.shift06m.aoi),]
   
