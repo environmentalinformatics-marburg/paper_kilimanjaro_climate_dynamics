@@ -1,7 +1,8 @@
-seasonPlotByAOI <- function(precip, color,
+seasonPlotByAOI <- function(precip, color, linetype = 1,
                             individual = FALSE,
                             normal = NULL,
-                            ymin = 0, ymax = 200){
+                            ymin = 0, ymax = 200,
+                            xlab = "Month", ylab = "Precipitation"){
 
 #   oni.reshape <- do.call("rbind", lapply(seq_len(nrow(oni)), function(i) {
 #     st <- as.Date(paste0(substr(oni[i, 3], 1, 4), "-07-01"))
@@ -39,6 +40,9 @@ seasonPlotByAOI <- function(precip, color,
   xhres <- seq(1, 12, 0.01)
   at <- seq(1, 1101, 100)
   labels <- c(seq(7, 12, 1), seq(1, 6, 1))
+  if(linetype == 1){
+    linetype = rep(1,length(precip))
+  }
   if(individual == TRUE){
     plot.precip <- 
       lapply(seq(precip), function(x){
@@ -47,10 +51,10 @@ seasonPlotByAOI <- function(precip, color,
           sp <- predict(sp, xhres)
           xnew <- as.factor(sp[[1]])
           factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01)))
-          xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", 
+          xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", lty = linetype[x],
                  ylim = c(ymin, ymax), col = colors[x],
                  scale=list(x=list(at = at, labels = labels)),
-                 xlab = "Month", ylab = "Precipitation")
+                 xlab = xlab, ylab = ylab)
         })})
     plot.precip.all <- 
       Reduce("outLayer", lapply(plot.precip, function(x){
@@ -63,10 +67,10 @@ seasonPlotByAOI <- function(precip, color,
           precip[[x]], spar=0.01), xhres)
         xnew <- as.factor(sp[[1]])
         factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01)))
-        xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", 
+        xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", lty = linetype[x],
                ylim = c(ymin, ymax), col = colors[x],
                scale=list(x=list(at = at, labels = labels)),
-               xlab = "Month", ylab = "Precipitation")
+               xlab = xlab, ylab = ylab)
       })
     plot.precip.all <- 
       Reduce("outLayer", plot.precip)

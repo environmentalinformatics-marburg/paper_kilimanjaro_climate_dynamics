@@ -1,4 +1,4 @@
-combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
+combineAOPI <- function(aoi, precipfun, rt = "median"){
   
   aoi.reshape <- do.call("rbind", lapply(seq_len(nrow(aoi)), function(i) {
     st <- as.Date(paste0(substr(aoi[i, 3], 1, 4), "-07-01"))
@@ -8,30 +8,46 @@ combineAOPI <- function(aoi, precip.shift06m, rt = "median"){
                month = seq(st, nd, "month"))
   }))
   
-  # Adjust precipitation data records to ENSO cycle logic (i.e. start in July and
-  # end in June) and combine precipitation and aoi data set
-  #   precip.shift06m <- precip[7:(nrow(precip)-6), ]
+  # Adjust precipfunitation data records to ENSO cycle logic (i.e. start in July and
+  # end in June) and combine precipfunitation and aoi data set
+  #   precipfun <- precipfun[7:(nrow(precipfun)-6), ]
   
-  precip.shift06m.aoi <- 
-    merge(precip.shift06m, aoi.reshape, all.x = TRUE, by.x = "ts", by.y = "month")
+  precipfun.aoi <- 
+    merge(precipfun, aoi.reshape, all.x = TRUE, by.x = "ts", by.y = "month")
   
-  precip.shift06m.aoi <- 
-    precip.shift06m.aoi[complete.cases(precip.shift06m.aoi),]
+#   precipfun.aoi <- 
+#     precipfun.aoi[complete.cases(precipfun.aoi),]
+#   
+  precipfun.aoi.split <- 
+    split(precipfun.aoi, precipfun.aoi$TypeClass)
   
-  precip.shift06m.aoi.split <- 
-    split(precip.shift06m.aoi, precip.shift06m.aoi$TypeClass)
-  
-  precip.shift06m.aoi.split.median <- 
-    foreach(i = precip.shift06m.aoi.split) %do% {
+  precipfun.aoi.split.median <- 
+    foreach(i = precipfun.aoi.split) %do% {
       sapply(1:12, function(j) {
         median(i$P_RT_NRT[seq(j, nrow(i), 12)], na.rm = TRUE)
       })
     }
+  
+  precipfun.aoi.split.harmonics <- 
+    foreach(i = precipfun.aoi.split, .combine = "rbind") %do% {
+      data.frame(TypeClass = unique(i$TypeClass),
+                 P_RT_NRT = vectorHarmonics(i$P_RT_NRT, 
+                        st = c(1, 1), 
+                        nd = c(nrow(i)/12, 12), 
+                        m = 3))
+       
+   }
+  
+  precipfun.aoi.split.harmonics <- 
+    split(precipfun.aoi.split.harmonics$P_RT_NRT, precipfun.aoi.split.harmonics$TypeClass)
+  
   if(rt == "median"){
-    return(precip.shift06m.aoi.split.median)
+    return(precipfun.aoi.split.median)
   } else if(rt == "split") {
-    return(precip.shift06m.aoi.split)
+    return(precipfun.aoi.split)
+  } else if (rt == "harmonics") {
+    return(precipfun.aoi.split.harmonics)
   } else {
-    return(precip.shift06m.aoi)
+    return(precipfun.aoi)
   }
 }

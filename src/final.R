@@ -8,7 +8,7 @@ sourcePath <- "scripts/paper_kilimanjaro_climate_dynamics/src/"
 dataPath <- "data/"
 graphicsPath <- "graphics/"
 
-printToFile = TRUE
+printToFile = FALSE
 
 library(kza)
 library(latticeExtra)
@@ -33,16 +33,29 @@ outLayer <- function(x, y) {
 
 #### Read data sets ############################################################
 # Read precipitation data and create a continous time series.
-precip <- 
+precipKIA <- 
   read.csv(
     paste0(dataPath, 
            "kilimanjaro_gsod_dynamics/gsod_precip/kia_prcp_1975_2014_mnthly.csv"), 
            stringsAsFactors = FALSE)
-precip[, 1] <- as.Date(precip[, 1])
-st <- precip[1, 1]
-nd <- precip[nrow(precip), 1]
+precipKIA[, 1] <- as.Date(precipKIA[, 1])
+st <- precipKIA[1, 1]
+nd <- precipKIA[nrow(precipKIA), 1]
 ts <- seq(st, nd, "month")
-precip <- merge(data.frame(ts), precip, by = 1, all.x = TRUE)
+precipKIA <- merge(data.frame(ts), precipKIA, by = 1, all.x = TRUE)
+
+precipNRB <- 
+  read.csv(
+    paste0(dataPath, 
+           "kilimanjaro_gsod_dynamics/gsod_precip/nairobi_prcp_1975_2014_mnthly.csv"), 
+    stringsAsFactors = FALSE)
+precipNRB[, 1] <- as.Date(precipNRB[, 1])
+st <- precipNRB[1, 1]
+nd <- precipNRB[nrow(precipNRB), 1]
+ts <- seq(st, nd, "month")
+precipNRB <- merge(data.frame(ts), precipNRB, by = 1, all.x = TRUE)
+
+precip.list <- list(KIA = precipKIA, NRB = precipNRB)
 
 # Read EOT
 cloudEOT <- read.csv(paste0(dataPath, "cloud_cover_monthly_myd06/eot/eot_series.csv"), 
@@ -134,6 +147,7 @@ aoi.list <- list(ONI = oni, MEI = mei, DMI = dmi, DMIHAD = dmiHAD)
 # publication quality figure.
 # Compute 3 month running mean of original precipitation values using a
 # Kolmogorov-Zurbenko filter with one iteration
+precip <- precip.list$KIA
 precip$kz03k01 <- kz(precip$P_RT_NRT, m = 3, k = 1)
 
 # Compute deseasoned precipitation time series and corresponding 3 month running
@@ -170,12 +184,12 @@ plot.precip.ssn_kz03k02 <-
                           alpha.se = 0.3, lty = 2)
          })
 MannKendall(precip$ssn_kz03k02)
+
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, "plot.precip.ssn_kz03k02.tif"),
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.ssn_kz03k02)
   dev.off()
-  
 } else {
   plot(plot.precip.ssn_kz03k02)  
 }
@@ -186,39 +200,50 @@ if(printToFile == TRUE){
 # Compute seasonal precipitation dynamics for each year of the time series
 # centered arround Dezember and create publication quality figure. 
 
-# Compute a three year running mean of the seasonal precipitation dynamics
-precip.seasonal03yr <- 
+# Compute a eleven year running mean of the seasonal precipitation dynamics
+precip.seasonal11yr <- 
   foreach(st = 1975:2003, nd = 1985:2013, .combine = "rbind") %do% {
-    st.process <- grep(st, precip[, 1])[7]
-    nd.process <- grep(nd, precip[, 1])[length(grep(nd, precip[, 1]))-6]
-    precip.process <- precip[st.process:nd.process, ]
-    data.frame(season = paste(st, nd, sep = "-"), 
-               p_dyn = vectorHarmonics(precip.process$kz03k01, 
-                                       st = c(st, 1), 
-                                       nd = c(nd, 12), 
-                                       m = 5))
-  }
+  st.process <- grep(st, precip[, 1])[7]
+  nd.process <- grep(nd, precip[, 1])[length(grep(nd, precip[, 1]))-6]
+  precip.process <- precip[st.process:nd.process, ]
+  data.frame(season = paste(st, nd, sep = "-"), 
+             p_dyn = precip.process.median <- 
+               sapply(1:12, function(j) {
+                 median(precip.process$P_RT_NRT[seq(j, nrow(precip.process), 12)], na.rm = TRUE)
+               }))
+}
+
+# precip.seasonal11yr <- 
+#   foreach(st = 1975:2003, nd = 1985:2013, .combine = "rbind") %do% {
+#     st.process <- grep(st, precip[, 1])[7]
+#     nd.process <- grep(nd, precip[, 1])[length(grep(nd, precip[, 1]))-6]
+#     precip.process <- precip[st.process:nd.process, ]
+#     data.frame(season = paste(st, nd, sep = "-"), 
+#                p_dyn = vectorHarmonics(precip.process$kz03k01, 
+#                                        st = c(st, 1), 
+#                                        nd = c(nd, 12), 
+#                                        m = 3))
+#   }
 
 # Split the running mean data set by year and create publication quality figure;
 # to smooth the cycle while not reducing the rainfall amounts significantly, 
 # use a spline prediction.
-precip.seasonal03yr.split <- 
-  split(precip.seasonal03yr, precip.seasonal03yr$season)
+precip.seasonal11yr.split <- 
+  split(precip.seasonal11yr, precip.seasonal11yr$season)
 
 colors <- colorRampPalette(
-  brewer.pal(11, "RdYlGn"))(length(precip.seasonal03yr.split))
+  brewer.pal(11, "RdYlGn"))(length(precip.seasonal11yr.split))
 
-plot.precip.seasonal03yr.all <- seasonPlotByAOI(
-  lapply(precip.seasonal03yr.split, function(x){x$p_dyn}), colors)
+plot.precip.seasonal11yr.all <- seasonPlotByAOI(
+  lapply(precip.seasonal11yr.split, function(x){x$p_dyn}), colors)
 
 if(printToFile == TRUE){
-  tiff(filename = paste0(graphicsPath, "plot.precip.seasonal03yr.all.tif"),
+  tiff(filename = paste0(graphicsPath, "plot.precip.seasonal11yr.all.tif"),
        width = 2480, height = 1748 , res = 300, pointsize =  12)
-  plot(plot.precip.seasonal03yr.all)
+  plot(plot.precip.seasonal11yr.all)
   dev.off()
-  
 } else {
-  plot(plot.precip.seasonal03yr.all)
+  plot(plot.precip.seasonal11yr.all)
 }
 
 # Non-spline version
@@ -233,6 +258,58 @@ if(printToFile == TRUE){
 # plot.precip.seasonal03yr.all <- 
 #   Reduce("outLayer", plot.precip.seasonal03yr.split)
 
+# Split the original precipitation data set by the three main wet/dry phases
+# identified in the long-term trend figure (see above)and create publication
+# quality figure; to smooth the cycle while not reducing the rainfall amounts 
+# significantly, use a spline prediction.
+precip.seasonalwetdry <- 
+  foreach(st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013), .combine = "rbind") %do% {
+    st.process <- grep(st, precip[, 1])[7]
+    nd.process <- grep(nd, precip[, 1])[length(grep(nd, precip[, 1]))-6]
+    precip.process <- precip[st.process:nd.process, ]
+    data.frame(season = paste(st, nd, sep = "-"), 
+               p_dyn = precip.process.median <- 
+        sapply(1:12, function(j) {
+          median(precip.process$P_RT_NRT[seq(j, nrow(precip.process), 12)], na.rm = TRUE)
+        }))
+  }
+
+# precip.seasonalwetdry <- 
+#   foreach(st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013), .combine = "rbind") %do% {
+#     st.process <- grep(st, precip[, 1])[7]
+#     nd.process <- grep(nd, precip[, 1])[length(grep(nd, precip[, 1]))-6]
+#     precip.process <- precip[st.process:nd.process, ]
+#     data.frame(season = paste(st, nd, sep = "-"), 
+#                p_dyn = vectorHarmonics(precip.process$P_RT_NRT, 
+#                                        st = c(st, 1), 
+#                                        nd = c(nd, 12), 
+#                                        m = 3))
+#   }
+
+# Split the running mean data set by year and create publication quality figure;
+# to smooth the cycle while not reducing the rainfall amounts significantly, 
+# use a spline prediction.
+precip.seasonalwetdry.split <- 
+  split(precip.seasonalwetdry, precip.seasonalwetdry$season)
+
+precip.seasonal.normal <- 
+  list(lapply(precip.seasonalwetdry.split, function(x){x$p_dyn})$"1975-2013")
+
+colors <- c("black", "blue3", "red", "cornflowerblue")
+
+plot.precip.seasonalwetdry.all <- seasonPlotByAOI(
+  lapply(precip.seasonalwetdry.split, function(x){x$p_dyn}), colors,
+  linetype = c(2,1,1,1), ymin = 0, ymax = 250)
+
+if(printToFile == TRUE){
+  tiff(filename = paste0(graphicsPath, "plot.precip.seasonalwetdry.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip.seasonalwetdry.all)
+  dev.off()
+} else {
+  plot(plot.precip.seasonalwetdry.all)
+}
+
 
 
 #### Precipitation analysis vs ENSO ############################################
@@ -240,28 +317,25 @@ if(printToFile == TRUE){
 # normal (N); weak ENSO cycles are classified as normal
 enso <- aoi.list$ONI
 enso$TypeClass <- "N"
-
-precip.shift06m <- precip[7:(nrow(precip)-6), ]
-
-precip.shift06m.enso.split.median <- combineAOPI(enso, precip.shift06m)
-
-colors <- c("orange")
-
-plot.precip.shift06m.enso.split.median.normal <- 
-  seasonPlotByAOI(precip.shift06m.enso.split.median, colors,
-                  ymin = 0, ymax = 300)
-
-enso$TypeClass <- "N"
-enso$TypeClass[grep("L", enso$Type)] <- "LS"
-enso$TypeClass[grep("WL", enso$Type)] <- "LW"
-enso$TypeClass[grep("E", enso$Type)] <- "ES"
-enso$TypeClass[grep("WE", enso$Type)] <- "EW"
-# enso$TypeClass[grep("W", enso$Type)] <- "N"
+enso$TypeClass[grep("L", enso$Type)] <- "La Nina"
+enso$TypeClass[grep("E", enso$Type)] <- "El Nino"
+# enso$TypeClass[grep("WL", enso$Type)] <- "La Nina weak"
+# enso$TypeClass[grep("WE", enso$Type)] <- "El Nino weak"
+# enso$TypeClass[grep("W", enso$Type)] <- "X"
 # enso$TypeClass[grep("M", enso$Type)] <- "X"
 
 precip.shift06m <- precip[7:(nrow(precip)-6), ]
 
 precip.shift06m.enso.split.median <- combineAOPI(enso, precip.shift06m)
+# precip.shift06m.enso.split.median <- combineAOPI(enso, precip.shift06m,
+#                                                  rt = "harmonics")
+
+yminmax = c(0, 250)
+
+colors <- c("black")
+plot.precip.shift06m.enso.split.median.normal <- 
+  seasonPlotByAOI(precip.seasonal.normal, colors,
+                  linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
 
 if(length(precip.shift06m.enso.split.median) == 5){
   colors <- c("blue", "lightblue", "red", "bisque", "black")
@@ -274,7 +348,7 @@ if(length(precip.shift06m.enso.split.median) == 5){
 plot.precip.shift06m.enso.split.median.all <- 
   seasonPlotByAOI(precip.shift06m.enso.split.median, colors,
                   normal = plot.precip.shift06m.enso.split.median.normal,
-                  ymin = 0, ymax = 300)
+                  ymin = yminmax[1], ymax = yminmax[2])
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -282,7 +356,6 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.enso.split.median.all)
   dev.off()
-  
 } else {
   plot(plot.precip.shift06m.enso.split.median.all)
 }
@@ -302,7 +375,6 @@ if(printToFile == TRUE){
 
 # Just for background information: the individual seasons which form the above
 # combined El Nino, La Nina and normal situation spline.
-
 precip.shift06m.enso.split <- combineAOPI(enso, precip.shift06m, rt = "split")
 
 precip.shift06m.enso.split.season <- lapply(precip.shift06m.enso.split, function(x){
@@ -358,6 +430,9 @@ precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
     dat$ssn_kz03k01[j]
   }
 }
+rownames(precip.shift06m.mat.ssn_kz03k01) <- years
+colnames(precip.shift06m.mat.ssn_kz03k01) <- paste0("PR-",
+                                                    sprintf("%02d", c(7:12, 1:6)))
 
 enso.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.enso[grep(i, precip.shift06m.enso$ts), ]
@@ -365,6 +440,9 @@ enso.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
     dat$aoi[j]
   }
 }
+rownames(enso.reshape.shift06m.mat) <- years
+colnames(enso.reshape.shift06m.mat) <- paste0("ONI-",
+                                              sprintf("%02d", c(7:12, 1:6)))
 
 plot.precip.shift06m.enso.ssn_kz03k01 <- 
   corPlotByAOI(enso.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01)
@@ -376,7 +454,6 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.enso.ssn_kz03k01)
   dev.off()
-  
 } else {
   plot(plot.precip.shift06m.enso.ssn_kz03k01)
 }
@@ -386,52 +463,64 @@ if(printToFile == TRUE){
 #### Precipitation analysis vs IOD #############################################
 # Prepare aoi record and classifiy years as IOD plus (P), IOD minus (M) or
 # normal (N)
-iod <- aoi.list$DMI
+iod <- aoi.list$DMIHAD
+iod$TypeClass <- "X"
+iod$TypeClass[grep("P", iod$IOD)] <- "C1 P"
+iod$TypeClass[grep("M", iod$IOD)] <- "C2 M"
+#iod$TypeClass[grep("S", iod$Type)] <- "X"
 
-iod$TypeClass <- "N"
+
 
 precip.shift06m <- precip[7:(nrow(precip)-6), ]
 
 precip.shift06m.iod.split.median <- combineAOPI(iod, precip.shift06m)
+# precip.shift06m.iod.split.median <- combineAOPI(iod, precip.shift06m,
+#                                                  rt = "harmonics")
 
-colors <- c("orange")
+yminmax = c(0, 250)
 
+colors <- c("black")
 plot.precip.shift06m.iod.split.median.normal <- 
-  seasonPlotByAOI(precip.shift06m.iod.split.median, colors,
-                  ymin = 0, ymax = 300)
-
-iod$TypeClass <- "N"
-iod$TypeClass[grep("P", iod$IOD)] <- "I1P"
-iod$TypeClass[grep("M", iod$IOD)] <- "I2M"
-#iod$TypeClass[grep("E", iod$Type)] <- "X"
-#iod$TypeClass[grep("L", iod$Type)] <- "X"
-
-precip.shift06m <- precip[7:(nrow(precip)-6), ]
-
-precip.shift06m.iod.split.median <- combineAOPI(iod, precip.shift06m)
+  seasonPlotByAOI(precip.seasonal.normal, colors,
+                  linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
 
 if(length(precip.shift06m.iod.split.median) == 5){
   colors <- c("blue", "lightblue", "red", "bisque", "black")
-} else if (length(precip.shift06m.iod.split.median) == 4){
-  colors <- c("blue", "red", "black", "bisque")
+} else if(length(precip.shift06m.iod.split.median) == 1){
+  colors <- c("black")
 } else {
   colors <- c("blue", "red", "black")  
 }
 
-plot.precip.shift06m.iod.split.median <- 
+colors <- c("blue", "red")  
+
+plot.precip.shift06m.iod.split.median.all <- 
   seasonPlotByAOI(precip.shift06m.iod.split.median, colors,
                   normal = plot.precip.shift06m.iod.split.median.normal,
-                  ymin = 0, ymax = 300)
+                  ymin = yminmax[1], ymax = yminmax[2])
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
-                         "plot.precip.shift06m.iod.split.median.tif"),
+                         "plot.precip.shift06m.iod.split.median.all.tif"),
        width = 2480, height = 1748 , res = 300, pointsize =  12)
-  plot(plot.precip.shift06m.iod.split.median)
+  plot(plot.precip.shift06m.iod.split.median.all)
   dev.off()
 } else {
-  plot(plot.precip.shift06m.iod.split.median)
+  plot(plot.precip.shift06m.iod.split.median.all)
 }
+
+# Non-spline version
+# plot.precip.shift06m.iod.split.median <- 
+#   lapply(seq(precip.shift06m.iod.split.median), function(x){
+#     xyplot(precip.shift06m.iod.split.median[[x]] ~ 
+#              factor(c(7:12, 1:6), levels = c(7:12, 1:6)), type = "l", 
+#            ylim = c(0, 200), col = colors[x])
+#   })
+# 
+# plot.precip.shift06m.iod.split.median.all <- 
+#   Reduce("outLayer", plot.precip.shift06m.iod.split.median)
+# plot.precip.shift06m.iod.split.median.all <- 
+#   Reduce("outLayer", plot.precip.shift06m.iod.split.median)
 
 # Just for background information: the individual seasons which form the above
 # combined El Nino, La Nina and normal situation spline.
@@ -454,6 +543,8 @@ if(printToFile == TRUE){
 } else {
   plot(plot.precip.shift06m.iod.split.season.all)
 }
+
+
 
 # Alternative boxplot visualization
 ## bwplots
@@ -479,16 +570,18 @@ if(printToFile == TRUE){
   plot(plot.precip.shift06m.iod.split.median.all.bw)
 }
 
-
 # Create publication quality figures of correlations between iod and 
 # precipitation
-years <- unique(substr(precip.shift06m.iod$ts, 1, 4))
+years <- unique(substr(precip$ts, 1, 4))
 precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.iod[grep(i, precip.shift06m.iod$ts), ]
   foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
     dat$ssn_kz03k01[j]
   }
 }
+rownames(precip.shift06m.mat.ssn_kz03k01) <- years
+colnames(precip.shift06m.mat.ssn_kz03k01) <- paste0("PR-",
+                                                    sprintf("%02d", c(7:12, 1:6)))
 
 iod.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.iod[grep(i, precip.shift06m.iod$ts), ]
@@ -496,9 +589,13 @@ iod.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
     dat$aoi[j]
   }
 }
+rownames(iod.reshape.shift06m.mat) <- years
+colnames(iod.reshape.shift06m.mat) <- paste0("DMI-",
+                                             sprintf("%02d", c(7:12, 1:6)))
 
 plot.precip.shift06m.iod.ssn_kz03k01 <- 
   corPlotByAOI(iod.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01)
+
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -506,35 +603,26 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.iod.ssn_kz03k01)
   dev.off()
-  
 } else {
   plot(plot.precip.shift06m.iod.ssn_kz03k01)
 }
 
 
 
-
 #### Precipitation analysis vs enid #############################################
 # Prepare aoi record and classifiy years as enid plus (P), enid minus (M) or
 # normal (N)
-enidDMI <- aoi.list$DMI
 enidENSO <- aoi.list$ONI
-fr <- grep(enidDMI$Season[1], enidENSO$Season)
-lr <- grep(enidDMI$Season[nrow(enidDMI)], enidENSO$Season)
-enid <- cbind(enidENSO[fr:lr,1:3],enidDMI[,4:15] + enidENSO[fr:lr,4:15])
+enidDMI <- aoi.list$DMIHAD
+st <- enidDMI$Season[1]
+nd <- enidDMI$Season[nrow(enidDMI)]
+fr <- grep(st, enidENSO$Season)
+lr <- grep(nd, enidENSO$Season)
+enidENSO <- enidENSO[fr:lr,]
+enidENSO[4:15] <- enidENSO[4:15] / max(abs(enidENSO[4:15]))
+enidDMI[4:15] <- enidDMI[4:15]/max(abs(enidDMI[4:15]))
+enid <- cbind(enidENSO[,1:3], enidDMI[,4:15] + enidENSO[,4:15])
 colnames(dmi)[4:15] <- colnames(oni)[4:15]
-
-enid$TypeClass <- "N"
-
-precip.shift06m <- precip[7:(nrow(precip)-6), ]
-
-precip.shift06m.enid.split.median <- combineAOPI(enid, precip.shift06m)
-
-colors <- c("orange")
-
-plot.precip.shift06m.enid.split.median.normal <- 
-  seasonPlotByAOI(precip.shift06m.enid.split.median, colors,
-                  ymin = 0, ymax = 300)
 
 enid$TypeClass <- "N"
 enid$TypeClass[grep("P", enid$enid)] <- "I1P"
@@ -549,86 +637,27 @@ enid$TypeClass[grep("WE", enid$Type)] <- "EW"
 precip.shift06m <- precip[7:(nrow(precip)-6), ]
 
 precip.shift06m.enid.split.median <- combineAOPI(enid, precip.shift06m)
+# precip.shift06m.enid.split.median <- combineAOPI(enid, precip.shift06m,
+#                                                  rt = "harmonics")
 
-if(length(precip.shift06m.enid.split.median) == 5){
-  colors <- c("blue", "lightblue", "red", "bisque", "black")
-} else if (length(precip.shift06m.enid.split.median) == 4){
-  colors <- c("blue", "red", "black", "bisque")
-} else {
-  colors <- c("blue", "red", "black")  
-}
-
-plot.precip.shift06m.enid.split.median <- 
-  seasonPlotByAOI(precip.shift06m.enid.split.median, colors,
-                  normal = plot.precip.shift06m.enid.split.median.normal,
-                  ymin = 0, ymax = 300)
-
-if(printToFile == TRUE){
-  tiff(filename = paste0(graphicsPath, 
-                         "plot.precip.shift06m.enid.split.median.tif"),
-       width = 2480, height = 1748 , res = 300, pointsize =  12)
-  plot(plot.precip.shift06m.enid.split.median)
-  dev.off()
-} else {
-  plot(plot.precip.shift06m.enid.split.median)
-}
-
-# Just for background information: the individual seasons which form the above
-# combined El Nino, La Nina and normal situation spline.
-precip.shift06m.enid.split <- combineAOPI(enid, precip.shift06m, rt = "split")
-
-precip.shift06m.enid.split.season <- lapply(precip.shift06m.enid.split, function(x){
-  split(x, x$Season)
-})
-
-plot.precip.shift06m.enid.split.season.all <- 
-  seasonPlotByAOI(precip.shift06m.enid.split.season, colors, individual = TRUE)
-
-if(printToFile == TRUE){
-  tiff(filename = paste0(graphicsPath, 
-                         "plot.precip.shift06m.enid.split.season.all.tif"),
-       width = 2480, height = 1748 , res = 300, pointsize =  12)
-  plot(plot.precip.shift06m.enid.split.season.all)
-  dev.off()
-  
-} else {
-  plot(plot.precip.shift06m.enid.split.season.all)
-}
-
-# Alternative boxplot visualization
-## bwplots
 precip.shift06m.enid <- combineAOPI(enid, precip.shift06m, rt = "org")
 precip.shift06m.enid$month <- substr(precip.shift06m.enid$ts, 6, 7)
 precip.shift06m.enid.melt <- melt(precip.shift06m.enid, 
                                   id.vars = c("month", "TypeClass"),
                                   measure.vars = "P_RT_NRT")
-bw.plot <- ggplot(data = precip.shift06m.enid.melt, 
-                  aes(y = value, x = month, fill = TypeClass, 
-                      dodge = TypeClass))
-plot.precip.shift06m.enid.split.median.all.bw <- bw.plot + geom_boxplot() +
-  xlab("Month") + ylab("Preciptiation")
-
-if(printToFile == TRUE){
-  tiff(filename = paste0(graphicsPath, 
-                         "plot.precip.shift06m.enid.split.median.all.bw.tif"),
-       width = 2480, height = 1748 , res = 300, pointsize =  12)
-  plot(plot.precip.shift06m.enid.split.median.all.bw)
-  dev.off()
-  
-} else {
-  plot(plot.precip.shift06m.enid.split.median.all.bw)
-}
-
 
 # Create publication quality figures of correlations between enid and 
 # precipitation
-years <- unique(substr(precip.shift06m.enid$ts, 1, 4))
+years <- unique(substr(precip$ts, 1, 4))
 precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.enid[grep(i, precip.shift06m.enid$ts), ]
   foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
     dat$ssn_kz03k01[j]
   }
 }
+rownames(precip.shift06m.mat.ssn_kz03k01) <- years
+colnames(precip.shift06m.mat.ssn_kz03k01) <- paste0("PR-",
+                                                    sprintf("%02d", c(7:12, 1:6)))
 
 enid.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
   dat <- precip.shift06m.enid[grep(i, precip.shift06m.enid$ts), ]
@@ -636,9 +665,13 @@ enid.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
     dat$aoi[j]
   }
 }
+rownames(enid.reshape.shift06m.mat) <- years
+colnames(enid.reshape.shift06m.mat) <- paste0("ENID-",
+                                              sprintf("%02d", c(7:12, 1:6)))
 
 plot.precip.shift06m.enid.ssn_kz03k01 <- 
   corPlotByAOI(enid.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01)
+
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -646,7 +679,6 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.enid.ssn_kz03k01)
   dev.off()
-  
 } else {
   plot(plot.precip.shift06m.enid.ssn_kz03k01)
 }
@@ -657,28 +689,41 @@ if(printToFile == TRUE){
 # Prepare aoi record and classifiy years as La Nina (L), El Nino (E) or 
 # normal (N); weak ENSO cycles are classified as normal
 enso <- aoi.list$ONI
-enso$TypeClass <- "N"
 
+enso$TypeClass <- "N"
 cloudEOT.shift06m <- cloudEOT[7:(nrow(cloudEOT)-6), ]
-colnames(cloudEOT.shift06m)[2] <-  "P_RT_NRT"
 
-cloudEOT.shift06m.enso.split.median <- combineAOPI(enso, cloudEOT.shift06m)
-
-colors <- c("orange")  
-
-plot.cloudEOT.shift06m.enso.split.median.normal <- 
-  seasonPlotByAOI(cloudEOT.shift06m.enso.split.median, colors,
-                  ymin = -0.2, ymax = 0.2)
+cloudEOT.seasonal.normal.all <- 
+  lapply(seq(3), function(x){
+  cloudEOT.shift06m <- cloudEOT[7:(nrow(cloudEOT)-6), ]
+  colnames(cloudEOT.shift06m)[x+1] <-  "P_RT_NRT"
+  cloudEOT.shift06m.enso.split.median <- combineAOPI(enso, cloudEOT.shift06m)
+})
 
 enso$TypeClass <- "N"
-enso$TypeClass[grep("L", enso$Type)] <- "LS"
-# enso$TypeClass[grep("WL", enso$Type)] <- "LW"
-enso$TypeClass[grep("E", enso$Type)] <- "ES"
-# enso$TypeClass[grep("WE", enso$Type)] <- "EW"
-# enso$TypeClass[grep("W", enso$Type)] <- "W"
+enso$TypeClass[grep("L", enso$Type)] <- "La Nina"
+enso$TypeClass[grep("E", enso$Type)] <- "El Nino"
+# enso$TypeClass[grep("WL", enso$Type)] <- "La Nina weak"
+# enso$TypeClass[grep("WE", enso$Type)] <- "El Nino weak"
+# enso$TypeClass[grep("W", enso$Type)] <- "X"
 # enso$TypeClass[grep("M", enso$Type)] <- "X"
 
+eot <- 3
+cloudEOT.seasonal.normal <- cloudEOT.seasonal.normal.all[eot][[1]]
+cloudEOT.shift06m <- cloudEOT[7:(nrow(cloudEOT)-6), ]
+colnames(cloudEOT.shift06m)[eot+1] <- "P_RT_NRT"
+
 cloudEOT.shift06m.enso.split.median <- combineAOPI(enso, cloudEOT.shift06m)
+# cloudEOT.shift06m.enso.split.median <- combineAOPI(enso, cloudEOT.shift06m,
+#                                                  rt = "harmonics")
+
+yminmax = c(0, 1)
+
+colors <- c("black")
+plot.cloudEOT.shift06m.enso.split.median.normal <- 
+  seasonPlotByAOI(cloudEOT.seasonal.normal, colors,
+                  linetype = c(2), 
+                  ymin = yminmax[1], ymax = yminmax[2], ylab = "Cloud cover")
 
 if(length(cloudEOT.shift06m.enso.split.median) == 5){
   colors <- c("blue", "lightblue", "red", "bisque", "black")
@@ -691,7 +736,7 @@ if(length(cloudEOT.shift06m.enso.split.median) == 5){
 plot.cloudEOT.shift06m.enso.split.median.all <- 
   seasonPlotByAOI(cloudEOT.shift06m.enso.split.median, colors,
                   normal = plot.cloudEOT.shift06m.enso.split.median.normal,
-                  ymin = -0.2, ymax = 0.2)
+                  ymin = yminmax[1], ymax = yminmax[2], ylab = "Cloud cover")
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -699,7 +744,6 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.cloudEOT.shift06m.enso.split.median.all)
   dev.off()
-  
 } else {
   plot(plot.cloudEOT.shift06m.enso.split.median.all)
 }
@@ -719,7 +763,6 @@ if(printToFile == TRUE){
 
 # Just for background information: the individual seasons which form the above
 # combined El Nino, La Nina and normal situation spline.
-
 cloudEOT.shift06m.enso.split <- combineAOPI(enso, cloudEOT.shift06m, rt = "split")
 
 cloudEOT.shift06m.enso.split.season <- lapply(cloudEOT.shift06m.enso.split, function(x){
@@ -727,9 +770,8 @@ cloudEOT.shift06m.enso.split.season <- lapply(cloudEOT.shift06m.enso.split, func
 })
 
 plot.cloudEOT.shift06m.enso.split.season.all <- 
-  seasonPlotByAOI(cloudEOT.shift06m.enso.split.season, colors, 
-                  individual = TRUE,
-                  ymin = -0.2, ymax = 0.2)
+  seasonPlotByAOI(cloudEOT.shift06m.enso.split.season, colors, individual = TRUE,
+                  ymin = yminmax[1], ymax = yminmax[2], ylab = "Cloud cover")
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -763,12 +805,13 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.cloudEOT.shift06m.enso.split.median.all.bw)
   dev.off()
+  
 } else {
   plot(plot.cloudEOT.shift06m.enso.split.median.all.bw)
 }
 
 # Create publication quality figures of correlations between enso and 
-# cloudEOT
+# cloudEOTitation
 years <- unique(substr(cloudEOT$ts, 1, 4))
 cloudEOT.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
   dat <- cloudEOT.shift06m.enso[grep(i, cloudEOT.shift06m.enso$ts), ]
@@ -776,6 +819,9 @@ cloudEOT.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do%
     dat$ssn_kz03k01[j]
   }
 }
+rownames(cloudEOT.shift06m.mat.ssn_kz03k01) <- years
+colnames(cloudEOT.shift06m.mat.ssn_kz03k01) <- paste0("CC-",
+                                                      sprintf("%02d", c(7:12, 1:6)))
 
 enso.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
   dat <- cloudEOT.shift06m.enso[grep(i, cloudEOT.shift06m.enso$ts), ]
@@ -783,6 +829,9 @@ enso.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
     dat$aoi[j]
   }
 }
+rownames(enso.reshape.shift06m.mat) <- years
+colnames(enso.reshape.shift06m.mat) <- paste0("ONI-",
+                                              sprintf("%02d", c(7:12, 1:6)))
 
 plot.cloudEOT.shift06m.enso.ssn_kz03k01 <- 
   corPlotByAOI(enso.reshape.shift06m.mat, cloudEOT.shift06m.mat.ssn_kz03k01)
@@ -794,11 +843,9 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.cloudEOT.shift06m.enso.ssn_kz03k01)
   dev.off()
-  
 } else {
   plot(plot.cloudEOT.shift06m.enso.ssn_kz03k01)
 }
-
 
 # test <- subset(precip.shift06m.aoi, ts >= "1997-01-01" & ts <= "2000-12-31")
 # findMaxCCF(as.numeric(scale(test$ssn_kz03k02)), test$aoi, na.action = na.exclude)
