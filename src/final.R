@@ -171,10 +171,18 @@ if(printToFile == TRUE){
 
 # Create publication quality figures of correlations between enso and 
 # precipitation
-test <- precip.shift06m.enso[precip.shift06m.enso$TypeClass == "El Nino",]
+test <- precip.shift06m.enso[precip.shift06m.enso$TypeClass == "N",]
+test <- precip.shift06m.enso
+test <- test[test$ts <= "1992-12-01",]
+test.season.mean <- aggregate(test[,c(2:6,11)], by = list(test$Season), FUN = mean)
+
+
 corPlotByAOI(precip.shift06m.aoi = test, 
+             parameter = "ssn_kz03k01",
              plotFilePath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
              printToFile = printToFile)
+
+
 
 
 #### Precipitation analysis vs IOD #############################################
@@ -290,7 +298,7 @@ corPlotByAOI(precip.shift06m.aoi = test,
 ### Cloud EOT analysis vs ENSO ################################################
 # Prepare aoi record and classifiy years as La Nina (L), El Nino (E) or 
 # normal (N); weak ENSO cycles are classified as normal
-enso <- aoi.list$DMIHAD
+enso <- aoi.list$ONI
 cloudEOT <- cloudEOT.list$EOTssn
 cloudEOT.shift06m <- cloudEOT[7:(nrow(cloudEOT)-6), ]
 
@@ -380,7 +388,7 @@ plot.cloudEOT.shift06m.enso.ssn_kz03k01 <- lapply(seq(3), function(x){
   colnames(act.cloudEOT.shift06m) <- c("ts", "EOT")
   cloudEOT.shift06m.enso <- combineAOPI(enso, act.cloudEOT.shift06m, 
                                         parameter = "EOT", rt = "org")
-  test <- cloudEOT.shift06m.enso
+  test <- cloudEOT.shift06m.enso # [cloudEOT.shift06m.enso$TypeClass == "El Nino", ]
   corPlotByAOI(precip.shift06m.aoi = test,
                parameter = "EOT",
                xlable = paste0("EOT", as.character(x)),
@@ -391,7 +399,10 @@ plot.cloudEOT.shift06m.enso.ssn_kz03k01 <- lapply(seq(3), function(x){
 })
 
 
-
+corPlotByAOI(precip.shift06m.aoi = test, 
+             parameter = "ssn_kz03k01",
+             plotFilePath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
+             printToFile = printToFile)
 
 
 

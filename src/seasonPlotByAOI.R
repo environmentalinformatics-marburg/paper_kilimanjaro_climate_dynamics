@@ -1,4 +1,4 @@
-seasonPlotByAOI <- function(precip, color, linetype = NULL,
+seasonPlotByAOI <- function(precip, colors, linetype = NULL,
                             individual = FALSE,
                             normal = NULL,
                             ymin = 0, ymax = 200,
