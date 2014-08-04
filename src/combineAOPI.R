@@ -1,4 +1,4 @@
-combineAOPI <- function(aoi, precipfun, rt = "median"){
+combineAOPI <- function(aoi, precipfun, parameter = "P_RT_NRT", rt = "median"){
   
   aoi.reshape <- do.call("rbind", lapply(seq_len(nrow(aoi)), function(i) {
     st <- as.Date(paste0(substr(aoi[i, 3], 1, 4), "-07-01"))
@@ -24,14 +24,14 @@ combineAOPI <- function(aoi, precipfun, rt = "median"){
   precipfun.aoi.split.median <- 
     foreach(i = precipfun.aoi.split) %do% {
       sapply(1:12, function(j) {
-        median(i$P_RT_NRT[seq(j, nrow(i), 12)], na.rm = TRUE)
+        median(i[, grep(parameter, colnames(i))][seq(j, nrow(i), 12)], na.rm = TRUE)
       })
     }
   
   precipfun.aoi.split.harmonics <- 
     foreach(i = precipfun.aoi.split, .combine = "rbind") %do% {
       data.frame(TypeClass = unique(i$TypeClass),
-                 P_RT_NRT = vectorHarmonics(i$P_RT_NRT, 
+                 P_RT_NRT = vectorHarmonics(i[, grep(parameter, colnames(i))], 
                         st = c(1, 1), 
                         nd = c(nrow(i)/12, 12), 
                         m = 3))

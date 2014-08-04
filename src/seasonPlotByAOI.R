@@ -1,4 +1,4 @@
-seasonPlotByAOI <- function(precip, color, linetype = 1,
+seasonPlotByAOI <- function(precip, color, linetype = NULL,
                             individual = FALSE,
                             normal = NULL,
                             ymin = 0, ymax = 200,
@@ -40,7 +40,7 @@ seasonPlotByAOI <- function(precip, color, linetype = 1,
   xhres <- seq(1, 12, 0.01)
   at <- seq(1, 1101, 100)
   labels <- c(seq(7, 12, 1), seq(1, 6, 1))
-  if(linetype == 1){
+  if(is.null(linetype)){
     linetype = rep(1,length(precip))
   }
   if(individual == TRUE){
