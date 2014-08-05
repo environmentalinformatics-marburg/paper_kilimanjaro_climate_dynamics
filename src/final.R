@@ -24,7 +24,7 @@ source(paste0(sourcePath, "vectorHarmonics.R"))
 source(paste0(sourcePath, "combineAOPI.R"))
 source(paste0(sourcePath, "seasonPlotByAOI.R"))
 source(paste0(sourcePath, "corPlotByAOI.R"))
-
+source(paste0(sourcePath, "corPlotTimeSeries.R"))
 
 #### Functions #################################################################
 outLayer <- function(x, y) {
@@ -175,14 +175,14 @@ test <- precip.shift06m.enso[precip.shift06m.enso$TypeClass == "N",]
 test <- precip.shift06m.enso
 test <- test[test$ts <= "1992-12-01",]
 test.season.mean <- aggregate(test[,c(2:6,11)], by = list(test$Season), FUN = mean)
-
-
-corPlotByAOI(precip.shift06m.aoi = test, 
-             parameter = "ssn_kz03k01",
-             plotFilePath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
-             printToFile = printToFile)
-
-
+corPlotTimeSeries(df = test, 
+                  xPrm = "aoi",
+                  yPrm = "ssn_kz03k01",
+                  tPrm = "ts",
+                  lableNameCounter = c(c(7:12),c(1:6)),
+                  pthv = 0.05,
+                  plotFilePath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
+                  printToFile = printToFile)
 
 
 #### Precipitation analysis vs IOD #############################################
@@ -251,10 +251,16 @@ if(printToFile == TRUE){
 # Create publication quality figures of correlations between iod and 
 # precipitation
 test <- precip.shift06m.iod
-corPlotByAOI(precip.shift06m.aoi = test, 
-             ylable = "DMI",
-             plotFilePath = "plot.precip.shift06m.iod.ssn_kz03k01.tif",
-             printToFile = printToFile)
+corPlotTimeSeries(df = test, 
+                  xPrm = "aoi",
+                  yPrm = "ssn_kz03k01",
+                  tPrm = "ts",
+                  xlable = "DMI",
+                  lableNameCounter = c(c(7:12),c(1:6)),
+                  pthv = 0.05,
+                  plotFilePath = "plot.precip.shift06m.iod.ssn_kz03k01.tif",
+                  printToFile = printToFile)
+
 
 
 #### Precipitation analysis vs enid #############################################
@@ -289,10 +295,15 @@ precip.shift06m.enid <- combineAOPI(enid, precip.shift06m, rt = "org")
 # Create publication quality figures of correlations between enid and 
 # precipitation
 test <- precip.shift06m.enid
-corPlotByAOI(precip.shift06m.aoi = test, 
-             ylable = "ENID",
-             plotFilePath = "plot.precip.shift06m.enid.ssn_kz03k01.tif",
-             printToFile = printToFile)
+corPlotTimeSeries(df = test, 
+                  xPrm = "aoi",
+                  yPrm = "ssn_kz03k01",
+                  tPrm = "ts",
+                  xlable = "ENID",
+                  lableNameCounter = c(c(7:12),c(1:6)),
+                  pthv = 0.05,
+                  plotFilePath = "plot.precip.shift06m.enid.ssn_kz03k01.tif",
+                  printToFile = printToFile)
 
 
 ### Cloud EOT analysis vs ENSO ################################################
@@ -389,24 +400,16 @@ plot.cloudEOT.shift06m.enso.ssn_kz03k01 <- lapply(seq(3), function(x){
   cloudEOT.shift06m.enso <- combineAOPI(enso, act.cloudEOT.shift06m, 
                                         parameter = "EOT", rt = "org")
   test <- cloudEOT.shift06m.enso # [cloudEOT.shift06m.enso$TypeClass == "El Nino", ]
-  corPlotByAOI(precip.shift06m.aoi = test,
-               parameter = "EOT",
-               xlable = paste0("EOT", as.character(x)),
-               ylable = "AOI",
-               plotFilePath = paste0("plot.cloudEOT-", as.character(x), 
-                                     ".shift06m.enso.ssn_kz03k01.tif"),
-               printToFile = printToFile)
+  corPlotTimeSeries(df = test, 
+                    xPrm = "aoi",
+                    yPrm = "EOT",
+                    tPrm = "ts",
+                    lableNameCounter = c(c(7:12),c(1:6)),
+                    pthv = 0.05,
+                    plotFilePath = paste0("plot.cloudEOT-", as.character(x), 
+                                          ".shift06m.enso.ssn_kz03k01.tif"),
+                    printToFile = printToFile)
 })
-
-
-corPlotByAOI(precip.shift06m.aoi = test, 
-             parameter = "ssn_kz03k01",
-             plotFilePath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
-             printToFile = printToFile)
-
-
-
-
 
 
 

@@ -4,7 +4,7 @@ corPlotByAOI <- function(precip.shift06m.aoi,
                          ylable = "ONI",
                          plotFilePath,
                          printToFile = FALSE){
-
+  
   years <- unique(substr(precip.shift06m.aoi$ts, 1, 4))
   precip.shift06m.mat.ssn_kz03k01 <- foreach(i = years, .combine = "rbind") %do% {
     dat <- precip.shift06m.aoi[grep(i, precip.shift06m.aoi$ts), ]
@@ -12,8 +12,8 @@ corPlotByAOI <- function(precip.shift06m.aoi,
       dat[, grep(parameter, colnames(dat))][j]
     }
   }
-  colnames(precip.shift06m.mat.ssn_kz03k01) <- paste0(xlable, "-",
-                                                      sprintf("%02d", c(7:12, 1:6)))
+  colnames(precip.shift06m.mat.ssn_kz03k01) <- paste0(
+    xlable, "-",sprintf("%02d", c(7:12, 1:6)))
   
   aoi.reshape.shift06m.mat <- foreach(i = years, .combine = "rbind") %do% {
     dat <- precip.shift06m.aoi[grep(i, precip.shift06m.aoi$ts), ]
@@ -22,14 +22,14 @@ corPlotByAOI <- function(precip.shift06m.aoi,
     }
   }
   colnames(aoi.reshape.shift06m.mat) <- paste0(ylable, "-",
-                                                sprintf("%02d", c(7:12, 1:6)))
+                                               sprintf("%02d", c(7:12, 1:6)))
   
-#   plot.precip.shift06m.aoi.ssn_kz03k01 <- 
-#     corPlotByAOI(aoi.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01)
+  #   plot.precip.shift06m.aoi.ssn_kz03k01 <- 
+  #     corPlotByAOI(aoi.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01)
   
   precip.shift06m.ssn_kz03k01.aoi.reshape.shift06m.cor <- 
-    cor(aoi.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01, use = "complete.obs", 
-        method = "kendall")
+    cor(aoi.reshape.shift06m.mat, precip.shift06m.mat.ssn_kz03k01, 
+        use = "pairwise.complete.obs", method = "kendall")
   
   print(max(precip.shift06m.ssn_kz03k01.aoi.reshape.shift06m.cor))
   print(min(precip.shift06m.ssn_kz03k01.aoi.reshape.shift06m.cor))
@@ -55,10 +55,4 @@ corPlotByAOI <- function(precip.shift06m.aoi,
   } else {
     plot(plot.precip.shift06m.aoi.ssn_kz03k01)
   }
-  
-  
-  
-  
-  
-  
 }
