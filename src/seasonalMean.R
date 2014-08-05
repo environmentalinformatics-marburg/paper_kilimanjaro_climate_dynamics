@@ -10,8 +10,8 @@ seasonalMean <- function(st, nd,
     precip.process <- precip[st.process:nd.process, ]
     df <- data.frame(season = paste(st, nd, sep = "-"), 
                      p_dyn = precip.process.median <- 
-                       sapply(1:nd.pos, function(j) {
-                         median(precip.process$P_RT_NRT[seq(j, nrow(precip.process), nd.pos)], na.rm = TRUE)
+                       sapply(1:12, function(j) {
+                         median(precip.process$P_RT_NRT[seq(j, nrow(precip.process), 12)], na.rm = TRUE)
                        }))
     if(nd.shift == 0) {
       df <- rbind(df, df[c(1:6),])
