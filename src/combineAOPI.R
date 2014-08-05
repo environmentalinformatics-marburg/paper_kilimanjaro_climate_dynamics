@@ -15,9 +15,9 @@ combineAOPI <- function(aoi, precipfun, parameter = "P_RT_NRT", rt = "median"){
   precipfun.aoi <- 
     merge(precipfun, aoi.reshape, all.x = TRUE, by.x = "ts", by.y = "month")
   
-#   precipfun.aoi <- 
-#     precipfun.aoi[complete.cases(precipfun.aoi),]
-#   
+  #   precipfun.aoi <- 
+  #     precipfun.aoi[complete.cases(precipfun.aoi),]
+  #   
   precipfun.aoi.split <- 
     split(precipfun.aoi, precipfun.aoi$TypeClass)
   
@@ -32,11 +32,11 @@ combineAOPI <- function(aoi, precipfun, parameter = "P_RT_NRT", rt = "median"){
     foreach(i = precipfun.aoi.split, .combine = "rbind") %do% {
       data.frame(TypeClass = unique(i$TypeClass),
                  P_RT_NRT = vectorHarmonics(i[, grep(parameter, colnames(i))], 
-                        st = c(1, 1), 
-                        nd = c(nrow(i)/12, 12), 
-                        m = 3))
-       
-   }
+                                            st = c(1, 1), 
+                                            nd = c(nrow(i)/12, 12), 
+                                            m = 3))
+      
+    }
   
   precipfun.aoi.split.harmonics <- 
     split(precipfun.aoi.split.harmonics$P_RT_NRT, precipfun.aoi.split.harmonics$TypeClass)
