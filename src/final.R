@@ -8,7 +8,7 @@ sourcePath <- "scripts/paper_kilimanjaro_climate_dynamics/src/"
 dataPath <- "data/"
 graphicsPath <- "graphics/"
 
-printToFile <- FALSE
+printToFile <- TRUE
 plot2file <- printToFile
 
 library(kza)
@@ -63,15 +63,39 @@ longTermDynamicsPlot(parameter = "temperature", printToFile = printToFile)
 # Compute 3 month running mean of original precipitation values using a
 # Kolmogorov-Zurbenko filter with one iteration
 precip <- precip.list$KIA
+precip[1:6, 2] <- NA
 precip$kz03k01 <- kz(precip$P_RT_NRT, m = 3, k = 1)
 
 # Compute deseasoned precipitation time series and corresponding 3 month running
 # mean using a Kolmogorov-Zurbenko filter with two iterations to close gaps
 precip$ssn <- precip$P_RT_NRT - rep(sapply(1:12, function(i) {
-  mean(precip$P_RT_NRT[seq(i, nrow(precip), 12)], na.rm = TRUE)
+    mean(precip$P_RT_NRT[seq(i, nrow(precip), 12)], na.rm = TRUE)
+  }), nrow(precip) / 12)
+
+precip$ssnmed <- precip$P_RT_NRT - rep(sapply(1:12, function(i) {
+  median(precip$P_RT_NRT[seq(i, nrow(precip), 12)], na.rm = TRUE)
 }), nrow(precip) / 12)
+
+precip$ssnpmed <- (precip$P_RT_NRT / rep(sapply(1:12, function(i) {
+  median(precip$P_RT_NRT[seq(i, nrow(precip), 12)], na.rm = TRUE)
+}), nrow(precip) / 12)) - 1.0
+precip$ssnpmed[!is.finite(precip$ssnpmed)] <- 0.0
+
+precip$ssnpmean <- (precip$P_RT_NRT / rep(sapply(1:12, function(i) {
+  mean(precip$P_RT_NRT[seq(i, nrow(precip), 12)], na.rm = TRUE)
+}), nrow(precip) / 12)) - 1.0
+
 precip$ssn_kz03k01 <- kz(precip$ssn, m = 3, k = 1)
 precip$ssn_kz03k02 <- kz(precip$ssn, m = 3, k = 2)
+
+precip$ssnmed_kz03k01 <- kz(precip$ssnmed, m = 3, k = 1)
+precip$ssnmed_kz03k02 <- kz(precip$ssnmed, m = 3, k = 2)
+
+precip$ssnpmed_kz03k01 <- kz(precip$ssnpmed, m = 3, k = 1)
+precip$ssnpmed_kz03k02 <- kz(precip$ssnpmed, m = 3, k = 2)
+
+precip$ssnpmean_kz03k01 <- kz(precip$ssnpmean, m = 3, k = 1)
+precip$ssnpmean_kz03k02 <- kz(precip$ssnpmean, m = 3, k = 2)
 
 longTermDynamicsPlot(parameter = "precipitation", printToFile = printToFile)
 
@@ -81,39 +105,75 @@ longTermDynamicsPlot(parameter = "precipitation", printToFile = printToFile)
 # identified in the long-term trend figure (see above)and create publication
 # quality figure; to smooth the cycle while not reducing the rainfall amounts 
 # significantly, use a spline prediction.
-precip.seasonalwetdry <- seasonalMean(
-  st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013))
-
-precip.18m.seasonalwetdry <- seasonalMean(
-  st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013), nd.shift = 0)
-
 # Split the running mean data set by year and create publication quality figure;
 # to smooth the cycle while not reducing the rainfall amounts significantly, 
 # use a spline prediction.
+colors <- c("black", "blue3", "red", "cornflowerblue")
+yminmax<- c(0, 250)
+#yminmax<- c(-150, 150)
+
+# 12 month season
+precip.seasonalwetdry <- seasonalMean(
+  st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013),
+  st.shift = 7, nd.shift = 0, timespan = 12, fun = "median", prm = "P_RT_NRT")
+
 precip.seasonalwetdry.split <- 
   split(precip.seasonalwetdry, precip.seasonalwetdry$season)
 precip.seasonal.normal <- 
   list(lapply(precip.seasonalwetdry.split, function(x){x$p_dyn})$"1975-2013")
 
+plot.precip.seasonalwetdry.all <- seasonPlotByAOI(
+  lapply(precip.seasonalwetdry.split, function(x){x$p_dyn}), colors,
+  linetype = c(2,1,1,1), ymin = yminmax[1], ymax = yminmax[2])
+
+# 18 month season
+precip.18m.seasonalwetdry <- seasonalMean(
+  st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013), 
+  st.shift = 7, nd.shift = 0, timespan = 18, fun = "median", prm = "P_RT_NRT")
+
 precip.18m.seasonalwetdry.split <- 
   split(precip.18m.seasonalwetdry, precip.18m.seasonalwetdry$season)
-
 precip.18m.seasonal.normal <- 
   list(lapply(precip.18m.seasonalwetdry.split, function(x){x$p_dyn})$"1975-2013")
 
-colors <- c("black", "blue3", "red", "cornflowerblue")
+plot.precip18m.seasonalwetdry.all <- 
+  visSeasonPlotByAOI(
+    lapply(precip.18m.seasonalwetdry.split, function(x){x$p_dyn}), colors,
+    linetype = c(2,1,1,1), ymin = yminmax[1], ymax = yminmax[2], timespan = 18)
 
-plot.precip.seasonalwetdry.all <- seasonPlotByAOI(
-  lapply(precip.seasonalwetdry.split, function(x){x$p_dyn}), colors,
-  linetype = c(2,1,1,1), ymin = 0, ymax = 250)
+# 24 month season
+precip.24m.seasonalwetdry <- seasonalMean(
+  st = c(1975,1976,1992,2001), nd = c(2013,1992,2000,2013), 
+  st.shift = 7, nd.shift = 0, timespan = 24, fun = "median", prm = "P_RT_NRT")
+
+precip.24m.seasonalwetdry.split <- 
+  split(precip.24m.seasonalwetdry, precip.24m.seasonalwetdry$season)
+precip.24m.seasonal.normal <- 
+  list(lapply(precip.24m.seasonalwetdry.split, function(x){x$p_dyn})$"1975-2013")
+
+plot.precip24m.seasonalwetdry.all <- 
+  visSeasonPlotByAOI(
+  lapply(precip.24m.seasonalwetdry.split, function(x){x$p_dyn}), colors,
+  linetype = c(2,1,1,1), ymin = yminmax[1], ymax = yminmax[2], timespan = 24)
+
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, "plot.precip.seasonalwetdry.all.tif"),
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.seasonalwetdry.all)
   dev.off()
+  tiff(filename = paste0(graphicsPath, "plot.precip18m.seasonalwetdry.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip18m.seasonalwetdry.all)
+  dev.off()
+  tiff(filename = paste0(graphicsPath, "plot.precip24m.seasonalwetdry.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip24m.seasonalwetdry.all)
+  dev.off()
 } else {
   plot(plot.precip.seasonalwetdry.all)
+  plot(plot.precip18m.seasonalwetdry.all)
+  plot(plot.precip24m.seasonalwetdry.all)
 }
 
 
@@ -127,42 +187,49 @@ enso$TypeClass[grep("WE", enso$Type)] <- "El Nino W"
 enso$TypeClass[grep("L", enso$Type)] <- "La Nina"
 enso$TypeClass[grep("WL", enso$Type)] <- "La Nina W"
 #enso$TypeClass[grep("W", enso$Type)] <- "N"
+enso$TypeClass[grep("P", enso$IOD)] <- "N"
+enso$TypeClass[grep("M", enso$IOD)] <- "N"
 
 # Compute plot for long-term normal distribution
-precip.shift06m <- precip[7:(nrow(precip)-6), ]
-precip.18m <- precip[1:(nrow(precip)-0), ]
-
-
-precip.shift06m.enso.split.median <- combineAOPI(enso, precip.shift06m)
-precip.18m.enso.split.median <- mergeAOIwTS(enso, precip.shift06m)
-
-
-yminmax = c(0, 200)
+yminmax = c(0, 350)
+#yminmax = c(-200,200)
 colors <- c("black")
+
+precip.shift06m <- precip[7:(nrow(precip)-6), ]
+precip.shift06m.enso.split.median <- combineAOPI(enso, precip.shift06m)
+
 plot.precip.shift06m.enso.split.median.normal <- 
   seasonPlotByAOI(precip.seasonal.normal, colors,
                   linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
 
 
+precip.18m <- precip[7:(nrow(precip)-0), ]
+precip.18m.enso.split.median <- mergeAOIwTS(enso, precip.18m, 
+                                            timespan = 18,
+                                            ts.prm = "P_RT_NRT",
+                                            rt = "median")
+
 plot.precip.18m.enso.split.median.normal <- 
   visSeasonPlotByAOI(precip.18m.seasonal.normal, colors,
-                  linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
+                     linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
 
+
+precip.24m <- precip[7:(nrow(precip)-0), ]
+precip.24m.enso.split.median <- mergeAOIwTS(enso, precip.24m, 
+                                            timespan = 24,
+                                            ts.prm = "P_RT_NRT",
+                                            rt = "median")
+
+plot.precip.24m.enso.split.median.normal <- 
+  visSeasonPlotByAOI(precip.24m.seasonal.normal, colors,
+                     linetype = c(2), ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 24)
 
 
 # Compute seasonal distribution by major aoi situation
-if(length(precip.shift06m.enso.split.median) == 5){
-  colors <- c("blue", "lightblue", "red", "bisque", "black")
-} else if(length(precip.shift06m.enso.split.median) == 1){
-  colors <- c("black")
-} else {
-  colors <- c("blue", "red", "black")  
-}
-
 red <- brewer.pal(4, "Reds")
 blue <- brewer.pal(4, "Blues")
 colors <- c(blue[4], blue[2], red[4], red[2], "black")
-
 
 plot.precip.shift06m.enso.split.median.all <- 
   seasonPlotByAOI(precip.shift06m.enso.split.median, colors,
@@ -174,7 +241,16 @@ plot.precip.18m.enso.split.median.all <-
   visSeasonPlotByAOI(precip.18m.enso.split.median, colors,
                   linetype = c(1,2,1,2,1),
                   normal = plot.precip.18m.enso.split.median.normal,
-                  ymin = yminmax[1], ymax = yminmax[2])
+                  ymin = yminmax[1], ymax = yminmax[2],
+                  vline.pos = 501)
+
+plot.precip.24m.enso.split.median.all <- 
+  visSeasonPlotByAOI(precip.24m.enso.split.median, colors,
+                     linetype = c(1,2,1,2,1),
+                     normal = plot.precip.24m.enso.split.median.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 24,
+                     vline.pos = 501)
 
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
@@ -182,9 +258,20 @@ if(printToFile == TRUE){
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.enso.split.median.all)
   dev.off()
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.precip.18m.enso.split.median.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip.18m.enso.split.median.all)
+  dev.off()
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.precip.24m.enso.split.median.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip.24m.enso.split.median.all)
+  dev.off()
 } else {
   plot(plot.precip.shift06m.enso.split.median.all)
   plot(plot.precip.18m.enso.split.median.all)
+  plot(plot.precip.24m.enso.split.median.all)
 }
 
 # Alternative boxplot visualization
@@ -213,18 +300,49 @@ if(printToFile == TRUE){
 # Create publication quality figures of correlations between enso and 
 # precipitation
 #test <- precip.shift06m.enso[precip.shift06m.enso$TypeClass == "N",]
+precip.shift06m.enso <- combineAOPI(enso, precip.shift06m, rt = "org")
+precip.shift06m.enso$StartSeason <- substr(precip.shift06m.enso$Season,1,4)
 test <- precip.shift06m.enso
-#test <- test[test$ts <= "1992-12-01",]
-#test.season.mean <- aggregate(test[,c(2:6,11)], by = list(test$Season), FUN = mean)
-visCorPlotTimeSeries(df = test, 
+m12 <- visCorPlotTimeSeries(df = test, 
                      x.prm = "aoi",
-                     y.prm = "ssn_kz03k01",
-                     t.prm = "ts",
+                     y.prm = "P_RT_NRT",
+                     t.prm = "StartSeason",
                      lable.nbrs = c(c(7:12),c(1:6)),
                      p.thv = 0.08,
-                     plot.filepath = "plot.precip.shift06m.enso.ssn_kz03k01.tif",
-                     plot2file = plot2file)
+                     plot.filepath = "plot.precip.shift06m.enso.cor.tif",
+                     plot2file = plot2file,
+                     rt = TRUE)
 
+precip.18m.enso <- mergeAOIwTS(enso, precip.18m, 
+                               timespan = 18, rt = "org")
+test <- precip.18m.enso # [precip.18m.enso$TypeClass == "El Nino", ]
+m18 <- visCorPlotTimeSeries(df = test, 
+                     x.prm = "aoi",
+                     y.prm = "P_RT_NRT",
+                     t.prm = "StartSeason",
+                     lable.nbrs = c(c(7:12),c(1:12)),
+                     p.thv = 0.08,
+                     plot.filepath = "plot.precip18m.enso.cor.tif",
+                     plot2file = plot2file,
+                     rt = TRUE)
+
+precip.24m.enso <- mergeAOIwTS(enso, precip.24m, 
+                               timespan = 24, rt = "org")
+test <- precip.24m.enso # [precip.24m.enso$TypeClass == "El Nino",]
+m24 <- visCorPlotTimeSeries(df = test, 
+                     x.prm = "aoi",
+                     y.prm = "P_RT_NRT",
+                     t.prm = "StartSeason",
+                     lable.nbrs = c(c(7:12),c(1:12),c(1:6)),
+                     p.thv = 0.08,
+                     plot.filepath = "plot.precip24m.enso.cor.tif",
+                     plot2file = plot2file,
+                     rt = TRUE)
+
+testm12m18 <- m12 - m18[1:12,1:12]
+testm18m24 <- m18 - m24[1:18,1:18]
+range(testm12m18, na.rm = TRUE)
+range(testm18m24, na.rm = TRUE)
 
 #### Precipitation analysis vs IOD #############################################
 # Prepare aoi record and classifiy years as IOD plus (P), IOD minus (M) or

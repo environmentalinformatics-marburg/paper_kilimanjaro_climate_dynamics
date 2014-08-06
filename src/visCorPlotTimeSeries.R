@@ -37,6 +37,7 @@ visCorPlotTimeSeries <- function(df,
                                  p.thv = 0.05,
                                  plot.filepath = "corPlot.tif",
                                  plot2file = FALSE,
+                                 rt = FALSE,
                                  ...){
   
   years <- unique(substr(df[, grep(t.prm, colnames(df))], 1, 4))
@@ -52,7 +53,7 @@ visCorPlotTimeSeries <- function(df,
   y.data <- foreach(i = years, .combine = "rbind") %do% {
     dat <- df[grep(i, df[, grep(t.prm, colnames(df))]), ]
     foreach(j = seq_len(nrow(dat)), .combine = "c") %do% {
-      dat[, grep(y.prm, colnames(dat))][j]
+      dat[, grep(y.prm, colnames(dat))[1]][j]
     }
   }
   colnames(y.data) <- paste0(y.lable, "-",sprintf("%02d", lable.nbrs))
@@ -114,5 +115,5 @@ visCorPlotTimeSeries <- function(df,
   } else {
     plot(plot.cor)
   }
-  return(cor.estimate)
+  if(rt){return(cor.estimate)}
 }
