@@ -1,4 +1,5 @@
 longTermDynamicsPlot <- function(parameter = "temperature",
+                                 p.prm = "ssn_kz03k02",
                                     printToFile = FALSE) {
   
   if(parameter == "temperature") {
@@ -70,11 +71,11 @@ longTermDynamicsPlot <- function(parameter = "temperature",
     
   } else if (parameter == "precipitation") {
     # Create publication quality figure of long term precipitation trends
-    clr <- as.character(ifelse(precip$ssn_kz03k02 > 0, "blue", "red"))
+    clr <- as.character(ifelse(precip[, grep(p.prm, colnames(precip))] > 0, "blue", "red"))
     clr.blue <- brewer.pal(9, "Blues")[2]
     clr.red <- brewer.pal(9, "Reds")[1]
     plot.precip.ssn_kz03k02 <- 
-      xyplot(ssn_kz03k02 ~ ts, data = precip, origin = 0, type = "h",
+      xyplot(precip[, grep(p.prm, colnames(precip))] ~ precip$ts, origin = 0, type = "h",
              border = "transparent", col = clr, asp = 0.25,
              xlab = "", ylab = "Precipitation (mm)", 
              lwd = 1.5, ylim = c(-250, 350), as.table = TRUE,

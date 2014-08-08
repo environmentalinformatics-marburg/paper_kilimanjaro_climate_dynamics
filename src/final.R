@@ -8,7 +8,7 @@ sourcePath <- "scripts/paper_kilimanjaro_climate_dynamics/src/"
 dataPath <- "data/"
 graphicsPath <- "graphics/"
 
-printToFile <- TRUE
+printToFile <- FALSE
 plot2file <- printToFile
 
 library(kza)
@@ -63,6 +63,21 @@ longTermDynamicsPlot(parameter = "temperature", printToFile = printToFile)
 # Compute 3 month running mean of original precipitation values using a
 # Kolmogorov-Zurbenko filter with one iteration
 precip <- precip.list$KIA
+
+# precip.checked <- do.call(rbind, lapply(seq(1:12), function(i) {
+#   pcl <- precip[seq(i, nrow(precip), 12), ]
+#   plot(log(pcl$P_RT_NRT[with(pcl, order(P_RT_NRT))]))
+#   thv <- quantile(pcl$P_RT_NRT,  probs = c(0.999), na.rm = TRUE)
+#   pcl$P_RT_NRT[pcl$P_RT_NRT >= thv] <- NA
+#   return(pcl)
+# }))
+# precip.checked <-  precip.checked[with(precip.checked, order(ts)), ]
+# precip <- precip.checked 
+
+plot(log(precip$P_RT_NRT[with(precip, order(P_RT_NRT))]))
+thv <- tail(sort(precip$P_RT_NRT), 3)[1]
+precip$P_RT_NRT[precip$P_RT_NRT >= thv] <- NA
+
 precip[1:6, 2] <- NA
 precip$kz03k01 <- kz(precip$P_RT_NRT, m = 3, k = 1)
 
@@ -97,7 +112,8 @@ precip$ssnpmed_kz03k02 <- kz(precip$ssnpmed, m = 3, k = 2)
 precip$ssnpmean_kz03k01 <- kz(precip$ssnpmean, m = 3, k = 1)
 precip$ssnpmean_kz03k02 <- kz(precip$ssnpmean, m = 3, k = 2)
 
-longTermDynamicsPlot(parameter = "precipitation", printToFile = printToFile)
+longTermDynamicsPlot(parameter = "precipitation", printToFile = printToFile,
+                     p.prm = "ssn_kz03k01")
 
 
 #### Seasonal precipitation analysis ###########################################
@@ -182,13 +198,13 @@ if(printToFile == TRUE){
 # normal (N); weak ENSO cycles are classified as normal
 enso <- aoi.list$MEI
 enso$TypeClass <- "N"
-enso$TypeClass[grep("E", enso$Type)] <- "El Nino"
-enso$TypeClass[grep("WE", enso$Type)] <- "El Nino W"
-enso$TypeClass[grep("L", enso$Type)] <- "La Nina"
-enso$TypeClass[grep("WL", enso$Type)] <- "La Nina W"
+enso$TypeClass[grep("E", enso$Type)] <- "C1 El Nino"
+#enso$TypeClass[grep("WE", enso$Type)] <- "El Nino W"
+enso$TypeClass[grep("L", enso$Type)] <- "C2 La Nina"
+#enso$TypeClass[grep("WL", enso$Type)] <- "La Nina W"
 #enso$TypeClass[grep("W", enso$Type)] <- "N"
-enso$TypeClass[grep("P", enso$IOD)] <- "N"
-enso$TypeClass[grep("M", enso$IOD)] <- "N"
+enso$TypeClass[grep("P", enso$IOD)] <- "C3 IOD P"
+enso$TypeClass[grep("M", enso$IOD)] <- "C4 IOD M"
 
 # Compute plot for long-term normal distribution
 yminmax = c(0, 350)
@@ -230,23 +246,26 @@ plot.precip.24m.enso.split.median.normal <-
 red <- brewer.pal(4, "Reds")
 blue <- brewer.pal(4, "Blues")
 colors <- c(blue[4], blue[2], red[4], red[2], "black")
+colors <- c(blue[4], red[4], "green", "orange", "black")
+linetype <- c(1,2,1,2,1)
+linetype <- c(1,1,1,1,1)
 
 plot.precip.shift06m.enso.split.median.all <- 
   seasonPlotByAOI(precip.shift06m.enso.split.median, colors,
-                  linetype = c(1,2,1,2,1),
+                  linetype = linetype,
                   normal = plot.precip.shift06m.enso.split.median.normal,
                   ymin = yminmax[1], ymax = yminmax[2])
 
 plot.precip.18m.enso.split.median.all <- 
   visSeasonPlotByAOI(precip.18m.enso.split.median, colors,
-                  linetype = c(1,2,1,2,1),
+                  linetype = linetype,
                   normal = plot.precip.18m.enso.split.median.normal,
                   ymin = yminmax[1], ymax = yminmax[2],
                   vline.pos = 501)
 
 plot.precip.24m.enso.split.median.all <- 
   visSeasonPlotByAOI(precip.24m.enso.split.median, colors,
-                     linetype = c(1,2,1,2,1),
+                     linetype = linetype,
                      normal = plot.precip.24m.enso.split.median.normal,
                      ymin = yminmax[1], ymax = yminmax[2],
                      timespan = 24,
@@ -353,35 +372,91 @@ iod$TypeClass[grep("P", iod$IOD)] <- "C1 P"
 iod$TypeClass[grep("M", iod$IOD)] <- "C2 M"
 
 # Compute plot for long-term normal distribution
+yminmax = c(0, 350)
+#yminmax = c(-200,200)
+colors <- c("black")
+
 precip.shift06m <- precip[7:(nrow(precip)-6), ]
 precip.shift06m.iod.split.median <- combineAOPI(iod, precip.shift06m)
-yminmax = c(0, 250)
-colors <- c("black")
+
 plot.precip.shift06m.iod.split.median.normal <- 
   seasonPlotByAOI(precip.seasonal.normal, colors,
                   linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
 
+
+precip.18m <- precip[7:(nrow(precip)-0), ]
+precip.18m.iod.split.median <- mergeAOIwTS(iod, precip.18m, 
+                                           timespan = 18,
+                                           ts.prm = "P_RT_NRT",
+                                           rt = "median")
+
+plot.precip.18m.iod.split.median.normal <- 
+  visSeasonPlotByAOI(precip.18m.seasonal.normal, colors,
+                     linetype = c(2), ymin = yminmax[1], ymax = yminmax[2])
+
+
+precip.24m <- precip[7:(nrow(precip)-0), ]
+precip.24m.iod.split.median <- mergeAOIwTS(iod, precip.24m, 
+                                           timespan = 24,
+                                           ts.prm = "P_RT_NRT",
+                                           rt = "median")
+
+plot.precip.24m.iod.split.median.normal <- 
+  visSeasonPlotByAOI(precip.24m.seasonal.normal, colors,
+                     linetype = c(2), ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 24)
+
+
 # Compute seasonal distribution by major aoi situation
-if(length(precip.shift06m.iod.split.median) == 5){
-  colors <- c("blue", "lightblue", "red", "bisque", "black")
-} else if(length(precip.shift06m.iod.split.median) == 1){
-  colors <- c("black")
-} else {
-  colors <- c("blue", "red", "black")  
-}
-colors <- c("blue", "red")  
+red <- brewer.pal(4, "Reds")
+blue <- brewer.pal(4, "Blues")
+colors <- c(blue[4], blue[2], red[4], red[2], "black")
+colors <- c("green", "orange", "black")
+linetype <- c(1,2,1,2,1)
+linetype <- c(1,1,1,1,1)
+linetype <- c(1,1,1)
+
 plot.precip.shift06m.iod.split.median.all <- 
   seasonPlotByAOI(precip.shift06m.iod.split.median, colors,
+                  linetype = linetype,
                   normal = plot.precip.shift06m.iod.split.median.normal,
                   ymin = yminmax[1], ymax = yminmax[2])
+
+plot.precip.18m.iod.split.median.all <- 
+  visSeasonPlotByAOI(precip.18m.iod.split.median, colors,
+                     linetype = linetype,
+                     normal = plot.precip.18m.iod.split.median.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     vline.pos = 501)
+
+plot.precip.24m.iod.split.median.all <- 
+  visSeasonPlotByAOI(precip.24m.iod.split.median, colors,
+                     linetype = linetype,
+                     normal = plot.precip.24m.iod.split.median.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 24,
+                     vline.pos = 501)
+
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
                          "plot.precip.shift06m.iod.split.median.all.tif"),
        width = 2480, height = 1748 , res = 300, pointsize =  12)
   plot(plot.precip.shift06m.iod.split.median.all)
   dev.off()
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.precip.18m.iod.split.median.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip.18m.iod.split.median.all)
+  dev.off()
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.precip.24m.iod.split.median.all.tif"),
+       width = 2480, height = 1748 , res = 300, pointsize =  12)
+  plot(plot.precip.24m.iod.split.median.all)
+  dev.off()
 } else {
   plot(plot.precip.shift06m.iod.split.median.all)
+  plot(plot.precip.18m.iod.split.median.all)
+  plot(plot.precip.24m.iod.split.median.all)
 }
 
 # Alternative boxplot visualization
@@ -409,16 +484,51 @@ if(printToFile == TRUE){
 
 # Create publication quality figures of correlations between iod and 
 # precipitation
+#test <- precip.shift06m.iod[precip.shift06m.iod$TypeClass == "N",]
+precip.shift06m.iod <- combineAOPI(iod, precip.shift06m, rt = "org")
+precip.shift06m.iod$StartSeason <- substr(precip.shift06m.iod$Season,1,4)
 test <- precip.shift06m.iod
-visCorPlotTimeSeries(df = test, 
-                     x.prm = "aoi",
-                     y.prm = "ssn_kz03k01",
-                     t.prm = "ts",
-                     x.lable = "DMI",
-                     lable.nbrs = c(c(7:12),c(1:6)),
-                     p.thv = 0.05,
-                     plot.filepath = "plot.precip.shift06m.iod.ssn_kz03k01.tif",
-                     plot2file = plot2file)
+m12 <- visCorPlotTimeSeries(df = test, 
+                            x.prm = "aoi",
+                            y.prm = "P_RT_NRT",
+                            t.prm = "StartSeason",
+                            lable.nbrs = c(c(7:12),c(1:6)),
+                            p.thv = 0.08,
+                            plot.filepath = "plot.precip.shift06m.iod.cor.tif",
+                            plot2file = plot2file,
+                            rt = TRUE)
+
+precip.18m.iod <- mergeAOIwTS(iod, precip.18m, 
+                              timespan = 18, rt = "org")
+test <- precip.18m.iod # [precip.18m.iod$TypeClass == "El Nino", ]
+m18 <- visCorPlotTimeSeries(df = test, 
+                            x.prm = "aoi",
+                            y.prm = "P_RT_NRT",
+                            t.prm = "StartSeason",
+                            lable.nbrs = c(c(7:12),c(1:12)),
+                            p.thv = 0.08,
+                            plot.filepath = "plot.precip18m.iod.cor.tif",
+                            plot2file = plot2file,
+                            rt = TRUE)
+
+precip.24m.iod <- mergeAOIwTS(iod, precip.24m, 
+                              timespan = 24, rt = "org")
+test <- precip.24m.iod # [precip.24m.iod$TypeClass == "El Nino",]
+m24 <- visCorPlotTimeSeries(df = test, 
+                            x.prm = "aoi",
+                            y.prm = "P_RT_NRT",
+                            t.prm = "StartSeason",
+                            y.lable = "P",
+                            lable.nbrs = c(c(7:12),c(1:12),c(1:6)),
+                            p.thv = 0.08,
+                            plot.filepath = "plot.precip24m.iod.cor.tif",
+                            plot2file = plot2file,
+                            rt = TRUE)
+
+testm12m18 <- m12 - m18[1:12,1:12]
+testm18m24 <- m18 - m24[1:18,1:18]
+range(testm12m18, na.rm = TRUE)
+range(testm18m24, na.rm = TRUE)
 
 
 
