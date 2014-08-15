@@ -1,10 +1,14 @@
 visSeasonPlotByAOI <- function(data, colors, linetype = NULL,
-                            individual = FALSE,
-                            normal = NULL,
-                            ymin = 0, ymax = 200,
-                            timespan = 18,
-                            xlab = "Month", ylab = "Precipitation",
-                            vline.pos = NULL){
+                               individual = FALSE,
+                               normal = NULL,
+                               ymin = 0, ymax = 200,
+                               timespan = 18,
+                               xlab = "Month", ylab = "Precipitation",
+                               vline.pos = NULL,
+                               x.text = NULL,
+                               y.text = NULL,
+                               labels.text = NULL,
+                               colors.text = NULL){
   
   xhres <- seq(1, timespan, 0.01)
   at <- seq(1, ((timespan-1)*100 + 1), 100)
@@ -31,28 +35,41 @@ visSeasonPlotByAOI <- function(data, colors, linetype = NULL,
       Reduce("outLayer", lapply(plot.data, function(x){
         Reduce("outLayer", x)
       }))    
+    if(!is.null(normal)){
+      plot.data.all <- 
+        Reduce("outLayer", c(list(normal), plot.data))
+    }
   } else {
     plot.data <- 
       lapply(seq(data), function(x){
         sp <- predict(smooth.spline(
           data[[x]], spar=0.01), xhres)
         xnew <- as.factor(sp[[1]])
-        factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01), seq(13,timespan,0.01)))
+        if (timespan > 12){
+          factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01), seq(13,timespan,0.01)))
+        } else {
+          factor(xnew, levels = c(seq(7,12,0.01), seq(1,6,0.01)))
+        }
         xyplot(sp[[2]] ~ xnew, type = "l", lwd = "2", lty = linetype[x],
                ylim = c(ymin, ymax), col = colors[x],
                scale=list(x=list(at = at, labels = labels)),
-               xlab = xlab, ylab = ylab, panel = function(x,y,...){
+               xlab = xlab, ylab = ylab, 
+               panel = function(x,y,...){
                  panel.xyplot(x,y,...)
                  panel.abline(v = vline.pos)
+                 panel.text(x = x.text, y = y.text,
+                            labels = labels.text,
+                            col = colors.text)
                })
       })
     plot.data.all <- 
       Reduce("outLayer", plot.data)
     plot.data.all <- plot.data.all
+    if(!is.null(normal)){
+      plot.data.all <- 
+        Reduce("outLayer", c(list(normal), plot.data))
+    }
   }
-  if(!is.null(normal)){
-    plot.data.all <- 
-      Reduce("outLayer", c(list(normal), plot.data))
-  }
+  
   return(plot.data.all)
 }

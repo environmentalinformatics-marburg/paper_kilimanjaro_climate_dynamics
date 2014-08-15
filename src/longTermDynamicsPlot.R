@@ -4,11 +4,28 @@ longTermDynamicsPlot <- function(parameter = "temperature",
   
   if(parameter == "temperature") {
     # Create publication quality figure of long term taitation trends
-    colors <- c("grey", "red", "blue")
+    greys <- brewer.pal(4, "Greys")
+    colors <- c(greys[3], "red", "blue", greys[4])
     ylim = c(10,35)
     plot.ta.Ta_200 <- 
       xyplot(TEMP ~ Datetime, data = ta, origin = 0, type = "l",
              border = "transparent", asp = 0.25, col = colors[1],
+             xlab = "", ylab = "Temperature (Deg C)", 
+             lwd = 1.5, ylim = ylim, as.table = TRUE,
+             scales = list(x = list(axs = "i")),
+             xscale.components = xscale.components.subticks,
+             yscale.components = yscale.components.subticks,
+             panel = function(x, y, ...) {
+               panel.xyplot(x, y, ...)
+               panel.smoother(x, y, method = "lm", 
+                              col = "black", 
+                              col.se = "black",
+                              alpha.se = 0.3, lty = 2, lwd = 2)
+             })
+
+    plot.ta.Ta_200.org <- 
+      xyplot(TEMP ~ Datetime, data = ta.org, origin = 0, type = "l",
+             border = "transparent", asp = 0.25, col = colors[4],
              xlab = "", ylab = "Temperature (Deg C)", 
              lwd = 1.5, ylim = ylim, as.table = TRUE,
              scales = list(x = list(axs = "i")),
@@ -55,8 +72,8 @@ longTermDynamicsPlot <- function(parameter = "temperature",
              })
     
     plot.ta.Ta_200.all <- 
-      Reduce("outLayer", list(plot.ta.Ta_200, plot.ta.Ta_200_Max,
-                              plot.ta.Ta_200_Min))
+      Reduce("outLayer", list(plot.ta.Ta_200, plot.ta.Ta_200.org,
+                              plot.ta.Ta_200_Max, plot.ta.Ta_200_Min))
     
     print(MannKendall(ta$TEMP))
     

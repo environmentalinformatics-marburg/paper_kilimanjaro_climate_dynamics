@@ -38,6 +38,11 @@ visCorPlotTimeSeries <- function(df,
                                  plot.filepath = "corPlot.tif",
                                  plot2file = FALSE,
                                  rt = FALSE,
+                                 rp = FALSE,
+                                 x.text = NULL,
+                                 y.text = NULL,
+                                 labels.text = NULL,
+                                 colors.text = NULL,
                                  ...){
   
   years <- unique(substr(df[, grep(t.prm, colnames(df))], 1, 4))
@@ -97,8 +102,17 @@ visCorPlotTimeSeries <- function(df,
   
   colors <- colorRampPalette(brewer.pal(9, "RdBu"))
   plot.cor.estimate <- levelplot((cor.estimate), col.regions = colors(100), 
-                                 at = seq(-.99, .99, .05), xlab = "", ylab = "",
-                                 colorkey = FALSE)
+                                 at = seq(-.99, .99, .05), 
+                                 scales = list(cex = 0.75, x = list(rot = 45)),
+                                 xlab = "", ylab = "",
+                                 colorkey = FALSE,
+                                 panel = function(x,y,...){
+                                   panel.levelplot(x,y,...)
+                                   panel.text(x = x.text, y = y.text,
+                                              labels = labels.text,
+                                              col = colors.text,
+                                              adj = c(0, 0))
+                                 })
   plot.cor.estimate.sig <- levelplot((cor.estimate.sig), 
                                      col.regions = colors(100), 
                                      at = seq(-.99, .99, .05), 
@@ -116,4 +130,5 @@ visCorPlotTimeSeries <- function(df,
     plot(plot.cor)
   }
   if(rt){return(cor.estimate)}
+  if(rp){return(plot.cor)}
 }

@@ -3,8 +3,8 @@ readData <- function(parameter = "temperature") {
   if(parameter == "temperature") {
     taKIA <- 
       read.csv(
-        paste0(dataPath, 
-               "temperature/noaa_gsod_kia_1973_2013_reformat_sd_li_jl_ssa.csv"), 
+        paste0(dataPath,
+               "temperature/data_all_gsod_temperature/data_all/noaa_gsod_kia_1973_2013_reformat_sd_li_jl_ssa.csv"), 
         stringsAsFactors = FALSE)
     taKIA[, 1] <- as.Date(taKIA[, 1])
     taKIA$YearMonth <- substr(taKIA$Datetime,1,7)
@@ -15,7 +15,13 @@ readData <- function(parameter = "temperature") {
       taKIA$MAX, by = list(taKIA$YearMonth), FUN = "mean")[[2]]
     taKIAMean$Ta_200_Min <- aggregate(
       taKIA$MIN, by = list(taKIA$YearMonth), FUN = "mean")[[2]]
-    return(list(KIA = taKIA, KIAMean = taKIAMean))
+    taKIAOrg <- 
+      read.csv(
+        paste0(dataPath,
+               "temperature/data_all_gsod_temperature/data_all/noaa_gsod_kia_1973_2013_reformat.csv"), 
+        stringsAsFactors = FALSE)
+    taKIAOrg$Datetime <- as.Date(taKIAOrg$Datetime)
+    return(list(KIA = taKIA, KIAMean = taKIAMean, KIAOrg = taKIAOrg))
   
   } else if (parameter == "precipitation") {
     precipKIA <- 
@@ -40,6 +46,7 @@ readData <- function(parameter = "temperature") {
     ts <- seq(st, nd, "month")
     precipNRB <- merge(data.frame(ts), precipNRB, by = 1, all.x = TRUE)
     return(list(KIA = precipKIA, NRB = precipNRB))
+    
   } else if(parameter == "cloudEOT") {
     cloudEOT <- read.csv(paste0(dataPath, "cloud_cover_monthly_myd06/eot/eot_series.csv"), 
                          header = TRUE, sep = ",")
@@ -55,8 +62,18 @@ readData <- function(parameter = "temperature") {
     cloudEOTssn$Month <- rep(1:12)
     cloudEOTssn$ts <- as.Date(paste0(cloudEOTssn$Year,"-",cloudEOTssn$Month,"-1"))
     cloudEOTssn <- cloudEOTssn[,c(8,2:4)]
-    return(list(EOT = cloudEOT, EOTssn = cloudEOTssn))
-  } else if(parameter == "aoi") {
+    
+    # Cluster
+    cloudClust <- read.csv(paste0(dataPath, "cloud_cover_monthly_myd06/cluster/clust_mean_series.csv"), 
+                         header = TRUE, sep = ",")
+    cloudClust$Years <- rep(2003:2013, each=12)
+    cloudClust$Month <- rep(1:12)
+    cloudClust$ts <- as.Date(paste0(cloudClust$Year,"-",cloudClust$Month,"-1"))
+    cloudClust <- cloudClust[,c(6,1:3)]
+    return(list(EOT = cloudEOT, EOTssn = cloudEOTssn, Clust = cloudClust))
+
+    
+    } else if(parameter == "aoi") {
     # Read ENSO ONI index
     oni <- read.csv(paste0(dataPath, "aoi/enso_and_iod.csv"),
                     skip = 1, header = TRUE)
