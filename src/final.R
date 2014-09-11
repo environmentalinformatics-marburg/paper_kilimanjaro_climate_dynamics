@@ -190,8 +190,8 @@ if(printToFile == TRUE){
 # # Prepare aoi record and classifiy years as La Nina (L), El Nino (E) or 
 # # normal (N); weak ENSO cycles are classified ENSO
 # # Compute seasonal distribution by major aoi situation
-# red <- brewer.pal(4, "Reds")
-# blue <- brewer.pal(4, "Blues")
+red <- brewer.pal(4, "Reds")
+blue <- brewer.pal(4, "Blues")
 # 
 # enso <- data.set$aoi.list$ONI
 # enso$TypeClass <- "C9 Normal"
@@ -937,8 +937,8 @@ if(printToFile == TRUE){
 ### Cloud EOT analysis vs ENSO ################################################
 # Prepare aoi record and classifiy years as La Nina (L), El Nino (E) or 
 # normal (N); weak ENSO cycles are classified as normal
-enidENSO <- aoi.list$ONI
-enidDMI <- aoi.list$DMI
+enidENSO <- data.set$aoi.list$ONI
+enidDMI <- data.set$aoi.list$DMI
 st <- enidDMI$Season[1]
 nd <- enidDMI$Season[nrow(enidDMI)]
 fr <- grep(st, enidENSO$Season)
@@ -1658,8 +1658,689 @@ if(printToFile == TRUE){
 
 
 
+# Cluster 1 - La Nina
+act.prm <- "clust1"
+cloud.20m.seasonalwetdry <- seasonalMean(data = cloud,
+                                         st = c(2003), nd = c(2013), 
+                                         st.shift = 7, nd.shift = 0, timespan = 20, fun = "median", prm = act.prm)
+cloud.20m.seasonalwetdry.split <- 
+  split(cloud.20m.seasonalwetdry, cloud.20m.seasonalwetdry$season)
+cloud.20m.seasonal.normal <- 
+  list(lapply(cloud.20m.seasonalwetdry.split, function(x){x$p_dyn})$"2003-2013")
+
+yminmax = c(0, 1)
+plot.colors <- c("grey")
+
+plot.cloud.20m.normal <- 
+  visSeasonPlotByAOI(cloud.20m.seasonal.normal, plot.colors,
+                     linetype = c(3), ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     ylab = "Cloud cover")
 
 
+plot.colors <- c("black", blue[3], blue[4], red[3], red[4], "darkgreen", "black")
+linetype <- c(1)
+
+
+# La Nina - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type == "WL" | 
+                 enso$Type == "ML" | 
+                 enso$Type == "SL"] <- "C1 all La Nina"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm =act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 all La Nina"])
+color <- plot.colors[1]
+plot.cloud.20m.enso.lanina.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(100), 
+                     y.text = c(0.25),
+                     labels.text = c("all La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.all
+
+# Pure La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure La Ninas"])
+color <- plot.colors[2]
+plot.cloud.20m.enso.lanina.pure <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(250), 
+                     y.text = c(0.15),
+                     labels.text = c("pure La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure
+
+# Pure medium and stron La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure m/s La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure m/s La Ninas"])
+color <- plot.colors[3]
+plot.cloud.20m.enso.lanina.pure.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(200), 
+                     y.text = c(0.5),
+                     labels.text = c("pure m/s La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure.ms
+
+# La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD+"])
+color <- plot.colors[4]
+plot.cloud.20m.enso.lanina.wIOD.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(610), 
+                     y.text = c(0.6),
+                     labels.text = c("La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.all
+
+# Medium and strong La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 m/s La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 m/s La Nina w IOD+"])
+color <- plot.colors[5]
+plot.cloud.20m.enso.lanina.wIOD.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(1300), 
+                     y.text = c(0.55),
+                     labels.text = c("m/s La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.ms
+
+# La Nina with IOD-
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "M" ] <- "C1 La Nina w IOD-"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD-"])
+
+# IOD+ - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type != "ML" & enso$Type != "SL" &
+                 enso$Type != "ML" & enso$Type != "SL" &
+                 enso$IOD == "P"] <- "C1 purest IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 purest IOD+"])
+color <- plot.colors[6]
+plot.cloud.20m.iod.p.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(600), 
+                     y.text = c(0.55),
+                     labels.text = c("purest IOD+"),
+                     colors.text = color)
+plot.cloud.20m.iod.p.all
+
+plot.cloud.20m.elnino.clust1 <- 
+  Reduce("outLayer", c(list(plot.cloud.20m.enso.lanina.all,
+                            plot.cloud.20m.enso.lanina.pure,
+                            plot.cloud.20m.enso.lanina.pure.ms,
+                            # plot.cloud.20m.enso.lanina.wIOD.all,
+                            plot.cloud.20m.enso.lanina.wIOD.ms,
+                            plot.cloud.20m.iod.p.all)))
+
+if(printToFile == TRUE){
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.cloud.20m.lanina.clust1.tif"),
+       width = 30, height = 15, units = "cm", res = 600, pointsize =  5)
+  plot(plot.cloud.20m.elnino.clust1)
+  dev.off()
+  pdf(file = paste0(graphicsPath, "plot.cloud.20m.lanina.clust1.tif.pdf"),
+      width = 12, height = 6, paper = "a4r")
+  plot(plot.cloud.20m.elnino.clust1)
+  dev.off()
+} else {
+  plot(plot.cloud.20m.elnino.clust1)
+}
+
+
+
+
+
+
+
+# Cluster 2 - La Nina
+act.prm <- "clust2"
+cloud.20m.seasonalwetdry <- seasonalMean(data = cloud,
+                                         st = c(2003), nd = c(2013), 
+                                         st.shift = 7, nd.shift = 0, timespan = 20, fun = "median", prm = act.prm)
+cloud.20m.seasonalwetdry.split <- 
+  split(cloud.20m.seasonalwetdry, cloud.20m.seasonalwetdry$season)
+cloud.20m.seasonal.normal <- 
+  list(lapply(cloud.20m.seasonalwetdry.split, function(x){x$p_dyn})$"2003-2013")
+
+yminmax = c(0, 1)
+plot.colors <- c("grey")
+
+plot.cloud.20m.normal <- 
+  visSeasonPlotByAOI(cloud.20m.seasonal.normal, plot.colors,
+                     linetype = c(3), ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     ylab = "Cloud cover")
+
+
+plot.colors <- c("black", blue[3], blue[4], red[3], red[4], "darkgreen", "black")
+linetype <- c(1)
+
+
+# La Nina - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type == "WL" | 
+                 enso$Type == "ML" | 
+                 enso$Type == "SL"] <- "C1 all La Nina"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm =act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 all La Nina"])
+color <- plot.colors[1]
+plot.cloud.20m.enso.lanina.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(100), 
+                     y.text = c(0.25),
+                     labels.text = c("all La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.all
+
+# Pure La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure La Ninas"])
+color <- plot.colors[2]
+plot.cloud.20m.enso.lanina.pure <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(250), 
+                     y.text = c(0.60),
+                     labels.text = c("pure La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure
+
+# Pure medium and stron La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure m/s La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure m/s La Ninas"])
+color <- plot.colors[3]
+plot.cloud.20m.enso.lanina.pure.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(950), 
+                     y.text = c(0.55),
+                     labels.text = c("pure m/s La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure.ms
+
+# La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD+"])
+color <- plot.colors[4]
+plot.cloud.20m.enso.lanina.wIOD.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(610), 
+                     y.text = c(0.6),
+                     labels.text = c("La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.all
+
+# Medium and strong La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 m/s La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 m/s La Nina w IOD+"])
+color <- plot.colors[5]
+plot.cloud.20m.enso.lanina.wIOD.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(1400), 
+                     y.text = c(0.65),
+                     labels.text = c("m/s La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.ms
+
+# La Nina with IOD-
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "M" ] <- "C1 La Nina w IOD-"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD-"])
+
+# IOD+ - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type != "ML" & enso$Type != "SL" &
+                 enso$Type != "ML" & enso$Type != "SL" &
+                 enso$IOD == "P"] <- "C1 purest IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 purest IOD+"])
+color <- plot.colors[6]
+plot.cloud.20m.iod.p.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(600), 
+                     y.text = c(0.55),
+                     labels.text = c("purest IOD+"),
+                     colors.text = color)
+plot.cloud.20m.iod.p.all
+
+plot.cloud.20m.elnino.clust2 <- 
+  Reduce("outLayer", c(list(plot.cloud.20m.enso.lanina.all,
+                            plot.cloud.20m.enso.lanina.pure,
+                            plot.cloud.20m.enso.lanina.pure.ms,
+                            # plot.cloud.20m.enso.lanina.wIOD.all,
+                            plot.cloud.20m.enso.lanina.wIOD.ms,
+                            plot.cloud.20m.iod.p.all)))
+
+if(printToFile == TRUE){
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.cloud.20m.lanina.clust2.tif"),
+       width = 30, height = 15, units = "cm", res = 600, pointsize =  5)
+  plot(plot.cloud.20m.elnino.clust2)
+  dev.off()
+  pdf(file = paste0(graphicsPath, "plot.cloud.20m.lanina.clust2.tif.pdf"),
+      width = 12, height = 6, paper = "a4r")
+  plot(plot.cloud.20m.elnino.clust2)
+  dev.off()
+} else {
+  plot(plot.cloud.20m.elnino.clust1)
+}
+
+
+
+
+
+
+
+
+
+
+# Cluster 3 - La Nina
+act.prm <- "clust3"
+cloud.20m.seasonalwetdry <- seasonalMean(data = cloud,
+                                         st = c(2003), nd = c(2013), 
+                                         st.shift = 7, nd.shift = 0, timespan = 20, fun = "median", prm = act.prm)
+cloud.20m.seasonalwetdry.split <- 
+  split(cloud.20m.seasonalwetdry, cloud.20m.seasonalwetdry$season)
+cloud.20m.seasonal.normal <- 
+  list(lapply(cloud.20m.seasonalwetdry.split, function(x){x$p_dyn})$"2003-2013")
+
+yminmax = c(0, 1)
+plot.colors <- c("grey")
+
+plot.cloud.20m.normal <- 
+  visSeasonPlotByAOI(cloud.20m.seasonal.normal, plot.colors,
+                     linetype = c(3), ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     ylab = "Cloud cover")
+
+
+plot.colors <- c("black", blue[3], blue[4], red[3], red[4], "darkgreen", "black")
+linetype <- c(1)
+
+
+# La Nina - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type == "WL" | 
+                 enso$Type == "ML" | 
+                 enso$Type == "SL"] <- "C1 all La Nina"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm =act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 all La Nina"])
+color <- plot.colors[1]
+plot.cloud.20m.enso.lanina.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(100), 
+                     y.text = c(0.25),
+                     labels.text = c("all La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.all
+
+# Pure La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure La Ninas"])
+color <- plot.colors[2]
+plot.cloud.20m.enso.lanina.pure <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(350), 
+                     y.text = c(0.40),
+                     labels.text = c("pure La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure
+
+# Pure medium and stron La Ninas
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD != "P" & enso$IOD != "M"] <- "C1 pure m/s La Ninas"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 pure m/s La Ninas"])
+color <- plot.colors[3]
+plot.cloud.20m.enso.lanina.pure.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(1350), 
+                     y.text = c(0.70),
+                     labels.text = c("pure m/s La Ninas"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.pure.ms
+
+# La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD+"])
+color <- plot.colors[4]
+plot.cloud.20m.enso.lanina.wIOD.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(610), 
+                     y.text = c(0.6),
+                     labels.text = c("La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.all
+
+# Medium and strong La Nina with IOD+
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "P" ] <- "C1 m/s La Nina w IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 m/s La Nina w IOD+"])
+color <- plot.colors[5]
+plot.cloud.20m.enso.lanina.wIOD.ms <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(650), 
+                     y.text = c(0.70),
+                     labels.text = c("m/s La Nina w IOD+"),
+                     colors.text = color)
+plot.cloud.20m.enso.lanina.wIOD.ms
+
+# La Nina with IOD-
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[(enso$Type == "WL" | enso$Type == "ML" | enso$Type == "SL") &
+                 enso$IOD == "M" ] <- "C1 La Nina w IOD-"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 La Nina w IOD-"])
+
+# IOD+ - all
+enso$TypeClass <- "C9 Normal"
+enso$TypeClass[enso$Type != "ML" & enso$Type != "SL" &
+                 enso$Type != "ML" & enso$Type != "SL" &
+                 enso$IOD == "P"] <- "C1 purest IOD+"
+cloud.20m <- cloud[7:(nrow(cloud)-0), ]
+cloud.20m.enso.split.median <- mergeAOIwTS(enso, cloud.20m, 
+                                           timespan = 20,
+                                           ts.prm = act.prm,
+                                           rt = "median")
+cloud.20m.info <- mergeAOIwTS(enso, cloud.20m, timespan = 20,
+                              ts.prm = act.prm, rt = "org")
+unique(cloud.20m.info$Season[cloud.20m.info$TypeClass == "C1 purest IOD+"])
+color <- plot.colors[6]
+plot.cloud.20m.iod.p.all <- 
+  visSeasonPlotByAOI(cloud.20m.enso.split.median[1], color,
+                     linetype = linetype,
+                     normal = plot.cloud.20m.normal,
+                     ymin = yminmax[1], ymax = yminmax[2],
+                     timespan = 20,
+                     vline.pos = 501,
+                     ylab = "Cloud cover",
+                     x.text = c(200), 
+                     y.text = c(0.75),
+                     labels.text = c("purest IOD+"),
+                     colors.text = color)
+plot.cloud.20m.iod.p.all
+
+plot.cloud.20m.elnino.clust3 <- 
+  Reduce("outLayer", c(list(plot.cloud.20m.enso.lanina.all,
+                            plot.cloud.20m.enso.lanina.pure,
+                            plot.cloud.20m.enso.lanina.pure.ms,
+                            # plot.cloud.20m.enso.lanina.wIOD.all,
+                            plot.cloud.20m.enso.lanina.wIOD.ms,
+                            plot.cloud.20m.iod.p.all)))
+
+if(printToFile == TRUE){
+  tiff(filename = paste0(graphicsPath, 
+                         "plot.cloud.20m.lanina.clust3.tif"),
+       width = 30, height = 15, units = "cm", res = 600, pointsize =  5)
+  plot(plot.cloud.20m.elnino.clust3)
+  dev.off()
+  pdf(file = paste0(graphicsPath, "plot.cloud.20m.lanina.clust3.tif.pdf"),
+      width = 12, height = 6, paper = "a4r")
+  plot(plot.cloud.20m.elnino.clust3)
+  dev.off()
+} else {
+  plot(plot.cloud.20m.elnino.clust1)
+}
 
 
 
