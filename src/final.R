@@ -64,7 +64,24 @@ longTermDynamicsPlot(parameter = "temperature", printToFile = printToFile)
 # publication quality figure.
 precip <- data.set$precip.list$KIA
 longTermDynamicsPlot(parameter = "precipitation", printToFile = printToFile,
-                     p.prm = "ssn_kz03k02")
+                     p.prm = "ssn_kz03k01")
+
+
+test <- data.frame(SSN = precip$ssn, INDEX = precip$Index)
+dtest <- aggregate(SSN ~ ., data = test, mean)
+jf <- subset(dtest, grepl("-1", dtest$INDEX))
+mam <- subset(dtest, grepl("-2", dtest$INDEX))
+jjas <- subset(dtest, grepl("-3", dtest$INDEX))
+ond <- subset(dtest, grepl("-4", dtest$INDEX))
+xyplot(ond$SSN ~ ond$INDEX, type = "h")
+xyplot(mam$SSN ~ mam$INDEX, type = "h")
+ond[c(24:31),]
+mam[c(23:30),]
+
+jf[which(jf$SSN > 0),]
+mam[which(mam$SSN > 0),]
+jjas[which(jjas$SSN > 0),]
+ond[which(ond$SSN > 0),]
 
 
 #### Seasonal precipitation analysis ###########################################
@@ -896,7 +913,7 @@ enid$TypeClass <- "N"
 # precipitation
 precip.20m.enid <- mergeAOIwTS(enid, precip.20m, 
                               timespan = 20, rt = "org")
-plot.cor.enid <- visCorPlotTimeSeries(df = test, 
+plot.cor.enid <- visCorPlotTimeSeries(df = precip.20m.enid, 
                             x.prm = "aoi",
                             y.prm = "P_RT_NRT",
                             t.prm = "StartSeason",
@@ -916,7 +933,7 @@ plot.cor.enid <- visCorPlotTimeSeries(df = test,
 plot.cor.precip.all <- 
   Reduce("grid31", list(plot.cor.enso, plot.cor.iod, plot.cor.enid))
 
-
+  
 if(printToFile == TRUE){
   tiff(filename = paste0(graphicsPath, 
                          "plot.cor.precip.all.tif"),
