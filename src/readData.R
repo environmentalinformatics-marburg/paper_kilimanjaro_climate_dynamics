@@ -45,7 +45,27 @@ readData <- function(parameter = "temperature") {
     nd <- precipNRB[nrow(precipNRB), 1]
     ts <- seq(st, nd, "month")
     precipNRB <- merge(data.frame(ts), precipNRB, by = 1, all.x = TRUE)
-    return(list(KIA = precipKIA, NRB = precipNRB))
+    
+    precipMO <- 
+      read.table(
+        paste0(dataPath, 
+               "metoffice/metoffice_1973-2013.csv"), 
+        stringsAsFactors = FALSE, header = TRUE)
+    precipMO[, 1] <- as.Date(precipMO[, 1])
+    st <- precipMO[1, 1]
+    nd <- precipMO[nrow(precipMO), 1]
+    ts <- seq(st, nd, "month")
+    precipMO <- merge(data.frame(ts), precipMO, by = 1, all.x = TRUE)
+    precipMOKIA <- data.frame(ts = precipMO$ts, 
+                              P_RT_NRT = precipMO$P_KIA_NEW)
+    precipMOMOSHI <- data.frame(ts = precipMO$ts, 
+                                P_RT_NRT = precipMO$P_MOSHI_NEW)
+    precipMOMEAN <- data.frame(ts = precipMO$ts, 
+                                P_RT_NRT = precipMO$P_MEAN_NEW)
+    
+    return(list(KIA = precipKIA, NRB = precipNRB,
+                MOKIA = precipMOKIA, MOMOSHI = precipMOMOSHI, 
+                MOMEAN = precipMOMEAN))
     
   } else if(parameter == "cloudEOT") {
     cloudEOT <- read.csv(paste0(dataPath, "cloud_cover_monthly_myd06/eot/eot_series.csv"), 
