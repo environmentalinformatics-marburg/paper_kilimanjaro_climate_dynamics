@@ -3,10 +3,13 @@ rm(list=ls(all=TRUE))
 library(season)
 library(quantreg)
 library(ggplot2)
-#library()
+library(latticeExtra)
 
 setwd("C:/Users/IOtte/documents/Desktop/kilimanjaro/data/metoffice/data/")
-prep <- read.csv2("precip.ct.all.csv", header = TRUE)
+prep <- read.csv("metoffice_1973-2013_season.csv", header = TRUE, sep = ";")
+
+prep$mnth <- substr(prep$YEAR, 6, 7)
+prep$ann <- substr(prep$YEAR, 1, 4)
 
 prep$P_SQRT2 <- prep$P_MEAN_NEW**0.25
 prep$mnth <- as.numeric(as.character(prep$mnth))
@@ -58,8 +61,8 @@ summary(mod_lm_sqrt2)
 reg <- rq(prep$P_MEAN_NEW ~ prep$date_precent, tau = c(0.2, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99))
 summary(reg, se = "nid")
 
-reg15 <- rq(prep$P_MEAN_NEW ~ prep$date_precent, tau = c(0.15))
-summary(reg15, se = "nid")
+reg05 <- rq(prep$P_MEAN_NEW ~ prep$date_precent, tau = c(0.15))
+summary(reg05, se = "nid")
 
 reg95 <- rq(prep$P_MEAN_NEW ~ prep$date_precent, tau = c(0.95))
 summary(reg95, se = "nid")
@@ -67,7 +70,13 @@ summary(reg95, se = "nid")
 # kein (kaum) Trend in den min Niederschlagen, negativer Trend in den max Niederschl??gen (significant)
 plot(prep$P_MEAN_NEW ~ prep$date_precent)
 abline(reg95, col = "blue")
-abline(reg15, col = "green")
+abline(reg05, col = "green")
+
+
+
+xyplot(prep$P_MEAN_NEW ~ prep$date_precent, type = "h")
+
+
 
 prep.reg <- ggplot(prep, aes(x = date_precent, y = P_MEAN_NEW)) +
          geom_point() + 
@@ -91,7 +100,7 @@ png("prep.reg.png", width = 30, height = 10,
 print(prep.reg)
 dev.off()
 
-summary(reg15, se = "nid")
+summary(reg05, se = "nid")
 summary(reg95, se = "nid")
 
 
