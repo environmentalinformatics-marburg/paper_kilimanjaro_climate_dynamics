@@ -100,15 +100,6 @@ for (x in unique(atnagaps$Parameter)){
   print(summary(lm(Temperature ~ time(Year), data = atnagaps[atnagaps$Parameter == x,])))
 }
 
-# Rainfall annual trends
-for (x in unique(rfa$Parameter)){
-  print(x)
-  print(summary(lm(Rainfall ~ time(Year), data = rfa[rfa$Parameter == x,])))
-}
-print(summary(rq(Rainfall ~ time(Year), tau = seq(0.8, 1, 0.05),
-                 data = rfa[rfa$Parameter == "P_MEAN_NEW",])))
-
-
 
 # Rainfall pre-processing trends
 rf$mnth <- as.numeric(substr(rf$YEAR, 6, 7))
@@ -137,6 +128,11 @@ rf$short_rains[rf$mnth >= 10 & rf$mnth <= 12 | rf$mnth == 1] <- 1
 rf$long_rains <- 0
 rf$long_rains[rf$mnth >= 3 & rf$mnth <= 5] <- 1
 
+rf$drywet <- "dry"
+rf$drywet[rf$long_rains == 1] <- "long_rains"
+rf$drywet[rf$short_rains == 1] <- "shor_rains"
+rf$drywet[rf$mnth >= 1 & rf$mnth <= 2] <- "dry_mid"
+
 rf <- merge(rf, ensoiod[, 1:3], by.x = "ann", by.y = "Season")
 
 rf$Season <- (c(0,0,0,0,0,0, rep(seq(1:40),each=12), 0,0,0,0,0,0))
@@ -149,8 +145,16 @@ rf$LaNina[substr(rf$ENSO, 2, 2) == "L"] <- 1
 
 
 rfts <- ts(rf$P_MEAN_NEW, start = 1973, end = 2013, frequency = 12)
-stl(rfts)
+plot(stl(rfts, 10, t.window = 120))
 
+
+# Rainfall annual trends
+for (x in unique(rfa$Parameter)){
+  print(x)
+  print(summary(lm(Rainfall ~ time(Year), data = rfa[rfa$Parameter == x,])))
+}
+print(summary(rq(Rainfall ~ time(Year), tau = seq(0.8, 1, 0.05),
+                 data = rfa[rfa$Parameter == "P_MEAN_NEW",])))
 
 # Time series stationarity
 kpss.test(rf$P_MEAN_NEW)
@@ -158,8 +162,8 @@ kpss.test(rf$P_MEAN_NEW, null = "Trend")
 
 
 # Rainfall frequency
-k = kernel("daniell", c(5))
-rfspec <- spec.pgram(rf$P_MEAN_NEW_ds, kernel = k, taper = 0, plot = TRUE, detrend = TRUE)
+k = kernel("daniell", c(3,3))
+rfspec <- spec.pgram(rf$P_MEAN_NEW, kernel = k, taper = 0, plot = FALSE, detrend = TRUE)
 
 rfspecdf <- data.frame(freq = rfspec$freq, spec = rfspec$spec)
 ticks <- c(30, 20, 10, 5, 3, 1, 0.5, 0.25)
@@ -171,29 +175,62 @@ breaks <- 1/(ticks * 12)
 ggplot(rfspecdf, aes(x = freq, y = spec)) + 
   geom_line() + 
   scale_x_log10("Period (years)", breaks = breaks, labels = labels) + 
+  scale_y_log10()
+
+
+rfwave <- morlet(y1 = rf$P_MEAN_NEW, x1 = time(rf$YEAR), p2 = 8, dj = 0.1, siglvl = 0.95)
+rfwave$period <- rfwave$period/12
+levels <- quantile(rfwave$Power, c(0, 0.25, 0.5, 0.75, 0.95, 1))
+wavelet.plot(rfwave, wavelet.levels = levels, crn.ylim = c(22.5, 30))
+
+rfwave_avg <- data.frame(power = apply(wave.out$Power, 2, mean), period = (wave.out$period))
+ggplot(rfwave_avg, aes(x = period, y = power)) + 
+  geom_line() + 
+  scale_x_continuous(breaks = seq(25)) + 
+  scale_y_continuous()
+
+# Rainfall frequency de-seasoned
+k = kernel("daniell", c(3,3))
+rfspec <- spec.pgram(rf$P_MEAN_NEW_ds, kernel = k, taper = 0, plot = FALSE, detrend = TRUE)
+
+rfspecdf <- data.frame(freq = rfspec$freq, spec = rfspec$spec)
+ticks <- c(30, 20, 10, 5, 3, 1, 0.5, 0.25)
+ticks <- c(30, 20, seq(12, 1, -1), seq(1, 0, -0.25))
+labels <- as.character(ticks)
+
+breaks <- 1/(ticks * 12)
+
+ggplot(rfspecdf, aes(x = freq, y = spec)) + 
+  geom_line() + 
+  scale_x_log10("Period (years)", breaks = breaks, labels = labels) + 
+  scale_y_log10()
+
+
+rfwave <- morlet(y1 = rf$P_MEAN_NEW_ds, x1 = time(rf$YEAR), p2 = 8, dj = 0.1, siglvl = 0.95)
+rfwave$period <- rfwave$period/12
+levels <- quantile(rfwave$Power, c(0, 0.25, 0.5, 0.75, 0.95, 1))
+wavelet.plot(rfwave, wavelet.levels = levels, crn.ylim = c(22.5, 30))
+
+rfwave_avg <- data.frame(power = apply(wave.out$Power, 2, mean), period = (wave.out$period))
+ggplot(rfwave_avg, aes(x = period, y = power)) + 
+  geom_line() + 
+  scale_x_continuous(breaks = seq(25)) + 
   scale_y_continuous()
 
 
-wave.out <- morlet(y1 = rf$P_MEAN_NEW_ds, x1 = time(rf$YEAR), p2 = 8, dj = 0.1, siglvl = 0.95)
-wave.out$period <- wave.out$period/12
-levs <- quantile(wave.out$Power, c(0, 0.25, 0.5, 0.75, 0.95, 1))
-wavelet.plot(wave.out, wavelet.levels = levs, crn.ylim = c(22.5, 30))
 
-wave.avg <- data.frame(power = apply(wave.out$Power, 2, mean), period = (wave.out$period))
-plot(wave.avg$period, wave.avg$power, type = "l")
-
-
-
-# plot yearly rainfall sums
+# Yearly rainfall sums
 ggplot(rf, aes(x = mnth, y = P_MEAN_NEW, colour = as.factor(Season))) +
   geom_bar(stat = "identity", position = "dodge") +
   xlab("Year") +
   ylab("Precipitation")
 
 # Rainfall trends
-rflm <- lm(P_MEAN_NEW_SQRT2 ~  time(YEAR), data = rf)
+rflm <- lm(P_MEAN_NEW_ds ~  time(YEAR), data = rf[rf$mnth == 4,])
 summary(rflm)
 anova(rflm)
+
+plot(rflm)
 
 rflm <- lm(P_MEAN_NEW_SQRT2 ~  time(YEAR) + short_rains * time(YEAR), data = rf)
 summary(rflm)
@@ -207,8 +244,25 @@ rflm <- lm(P_MEAN_NEW_SQRT2 ~  time(YEAR) + long_rains * time(YEAR) + short_rain
 summary(rflm)
 anova(rflm)
 
-rflm <- lm(P_MEAN_NEW ~  time(YEAR) + long_rains * time(YEAR) + short_rains * time(YEAR) +
-             M2 * time(YEAR) +
+
+
+rflm <- lm(P_MEAN_NEW_ds ~  time(YEAR) + as.factor(mnth) * time(YEAR), data = rf)
+summary(rflm)
+anova(rflm)
+
+rflm <- lm(P_MEAN_NEW_LOG ~  time(YEAR) + drywet * time(YEAR), data = rf)
+summary(rflm)
+anova(rflm)
+
+
+
+
+
+
+
+
+rflm <- lm(P_MEAN_NEW_ds ~  time(YEAR) + long_rains * time(YEAR) + short_rains * time(YEAR) +
+             M1 * time(YEAR) +
              M3 * time(YEAR) + M4 * time(YEAR) +  M5 * time(YEAR) + 
              M6 * time(YEAR) + M7 * time(YEAR) + M8 * time(YEAR) + 
              M9 * time(YEAR) + M10 * time(YEAR) + M11 * time(YEAR) +
@@ -216,7 +270,7 @@ rflm <- lm(P_MEAN_NEW ~  time(YEAR) + long_rains * time(YEAR) + short_rains * ti
 summary(rflm)
 anova(rflm)
 
-rflm <- lm(P_MEAN_NEW_LOG ~  time(YEAR) + long_rains * time(YEAR) + short_rains * time(YEAR) +
+rflm <- lm(P_MEAN_NEW_ds ~  time(YEAR) + long_rains * time(YEAR) + short_rains * time(YEAR) +
              M1 * time(YEAR) + M2 * time(YEAR) +
              M3 * time(YEAR) + M4 * time(YEAR) +  M5 * time(YEAR) + 
              M6 * time(YEAR) + M7 * time(YEAR) + M8 * time(YEAR) + 
