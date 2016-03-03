@@ -183,11 +183,12 @@ rfwave$period <- rfwave$period/12
 levels <- quantile(rfwave$Power, c(0, 0.25, 0.5, 0.75, 0.95, 1))
 wavelet.plot(rfwave, wavelet.levels = levels, crn.ylim = c(22.5, 30))
 
-rfwave_avg <- data.frame(power = apply(wave.out$Power, 2, mean), period = (wave.out$period))
+rfwave_avg <- data.frame(power = apply(rfwave$Power, 2, mean), period = (rfwave$period))
 ggplot(rfwave_avg, aes(x = period, y = power)) + 
   geom_line() + 
   scale_x_continuous(breaks = seq(25)) + 
   scale_y_continuous()
+
 
 # Rainfall frequency de-seasoned
 k = kernel("daniell", c(3,3))
@@ -211,7 +212,7 @@ rfwave$period <- rfwave$period/12
 levels <- quantile(rfwave$Power, c(0, 0.25, 0.5, 0.75, 0.95, 1))
 wavelet.plot(rfwave, wavelet.levels = levels, crn.ylim = c(22.5, 30))
 
-rfwave_avg <- data.frame(power = apply(wave.out$Power, 2, mean), period = (wave.out$period))
+rfwave_avg <- data.frame(power = apply(rfwave$Power, 2, mean), period = (rfwave$period))
 ggplot(rfwave_avg, aes(x = period, y = power)) + 
   geom_line() + 
   scale_x_continuous(breaks = seq(25)) + 
@@ -226,13 +227,57 @@ ggplot(rf, aes(x = mnth, y = P_MEAN_NEW, colour = as.factor(Season))) +
   ylab("Precipitation")
 
 # Rainfall trends
-rflm <- lm(P_MEAN_NEW_ds ~  time(YEAR), data = rf[rf$mnth == 4,])
+rflm <- lm(P_MEAN_NEW_LOG ~  time(YEAR), data = rf[rf$mnth == 4,])
 summary(rflm)
 anova(rflm)
 
+rf$P_MEAN_NEW <- rf$P_MEAN_NEW + 1
+
+rflm <- glm(round(P_MEAN_NEW, digits = 0) ~  time(YEAR) + 
+              short_rains * time(YEAR) + long_rains * time(YEAR), family = "poisson", data = rf)
+summary(rflm)
+anova(rflm)
 plot(rflm)
 
-rflm <- lm(P_MEAN_NEW_SQRT2 ~  time(YEAR) + short_rains * time(YEAR), data = rf)
+
+
+
+
+fit <- cosinor.lm(P_MEAN_NEW ~  time(ann),
+                  period = 0.25, data = rf)
+summary(fit)
+ggplot.cosinor.lm(fit)
+ggplot.cosinor.lm(fit, c("long_rains"))
+
+
+plot(rflm)
+
+
+data(CVD)
+res = cosinor(cvd~1, date='month', data=CVD, type='monthly',
+              family=poisson(), offsetmonth=TRUE)
+summary(res)
+plot(res)
+
+
+f = c(12)
+tau = c(130,10)
+res12 = nscosinor(data=CVD, response='adj', cycles=f, niters=5000,
+                  burnin=1000, tau=tau)
+summary(res12)
+plot(res12)
+
+
+fit = cosinor(round(P_MEAN_NEW, digits = 0) ~ time(YEAR) + short_rains * time(YEAR) + long_rains * time(YEAR), 
+              date='mnth', data=rf, type='monthly', cycle = 2,
+              family=poisson())
+summary(fit)
+anova(fit)
+plot(fit)
+seasrescheck(resid(fit))
+
+
+rflm <- lm(P_MEAN_NEW ~  time(YEAR) + short_rains  * time(YEAR), data = rf)
 summary(rflm)
 anova(rflm)
 

@@ -25,7 +25,8 @@ atk$Datetime <- as.Date(atk$Datetime)
 atn$Datetime <- as.Date(atn$Datetime)
 atkgaps$Datetime <- as.Date(atkgaps$Datetime)
 atngaps$Datetime <- as.Date(atngaps$Datetime)
-rf$YEAR <- as.Date(as.character(rf$YEAR))
+colnames(rf)[1] <- "Year"
+rf$Year <- as.Date(as.character(rf$Year))
 colnames(ensoiod)[2] <- "ENSO"
 
 
@@ -67,20 +68,26 @@ atnagaps <- lapply(seq(9, length(colnames(atngaps))), function(x){
 })
 atnagaps <- do.call("rbind", atnagaps)
 
+# Rainfall pre-processing trends
 rfa <- lapply(seq(2, length(colnames(rf))), function(x){
-  ret <- aggregate(rf[, x], by = list(substr(rf$YEAR, 1, 4)), FUN = "sum")
+  ret <- aggregate(rf[, x], by = list(substr(rf$Year, 1, 4)), FUN = "sum")
   ret$Group.1 <- as.Date(ret$Group.1, format = "%Y")
   colnames(ret) <- c("Year", "Rainfall")
   ret$Parameter <- colnames(rf)[x]
   return(ret)
 })
 rfa <- do.call("rbind", rfa)
+rfa$ann <- as.numeric(substr(rfa$Year, 1, 4))
+rfa <- merge(rfa, ensoiod[, 1:3], by.x = "ann", by.y = "Season")
+rfa$ElNino <- 0
+rfa$ElNino[substr(rfa$ENSO, 2, 2) == "E"] <- 1
+rfa$LaNina <- 0
+rfa$LaNina[substr(rfa$ENSO, 2, 2) == "L"] <- 1
 
 
-# Rainfall pre-processing trends
-rf$mnth <- as.numeric(substr(rf$YEAR, 6, 7))
+rf$mnth <- as.numeric(substr(rf$Year, 6, 7))
 rf$mnth_precent <- rf$mnth / 12
-rf$ann <- as.numeric(substr(rf$YEAR, 1, 4))
+rf$ann <- as.numeric(substr(rf$Year, 1, 4))
 rf$date_precent <- rf$ann + rf$mnth_precent
 rf$P_MEAN_NEW_LOG <- log(rf$P_MEAN_NEW + 1)
 rf$P_MEAN_NEW_SQRT2 <- rf$P_MEAN_NEW**0.25
@@ -88,6 +95,10 @@ rf$P_MEAN_NEW_SQRT2 <- rf$P_MEAN_NEW**0.25
 P_MEAN_NEW_mmean <- aggregate(rf$P_MEAN_NEW, by = list(rf$mnth), FUN = mean)
 rf$P_MEAN_NEW_ds <- rf$P_MEAN_NEW - rep(sapply(1:12, function(x){
   P_MEAN_NEW_mmean[x, "x"]}), nrow(rf)/12)
+
+rf$P_MEAN_NEW_ds_SQRT2 <- (rf$P_MEAN_NEW_ds + 500)**0.25
+
+rf$P_MEAN_NEW_ds_LOG <- (rf$P_MEAN_NEW_LOG + 500)**0.25
 
 df <- lapply(seq(12), function(x){
   m <- rep(0, nrow(rf))

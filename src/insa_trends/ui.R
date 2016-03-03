@@ -1,8 +1,3 @@
-library(dplR)
-library(ggplot2)
-library(multitaper)
-library(quantreg)
-library(tseries)
 library(shiny)
 
 
@@ -17,6 +12,7 @@ shinyUI(fluidPage(
   sidebarLayout(
     position = "right",
     sidebarPanel(
+      uiOutput("dataset"),
       uiOutput("dep_prm"),
       uiOutput("ind_prm")
     ),
@@ -25,6 +21,9 @@ shinyUI(fluidPage(
     mainPanel(
       textOutput("frml"),
       verbatimTextOutput ("lm"),
+      verbatimTextOutput("sw"),
+      plotOutput("plot"),
+      plotOutput("qqplot"),
       verbatimTextOutput ("anova")
       # plotOutput("distPlot")
     )
